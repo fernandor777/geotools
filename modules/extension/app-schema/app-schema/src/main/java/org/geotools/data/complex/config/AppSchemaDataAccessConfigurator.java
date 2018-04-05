@@ -866,6 +866,8 @@ public class AppSchemaDataAccessConfigurator {
         final List<SourceDataStore> dsParams = config.getSourceDataStores();
         String id;
 
+        List<CustomSourceDataStore> extensions = CustomSourceDataStore.loadExtensions();
+
         for (SourceDataStore dsconfig : dsParams) {
             id = dsconfig.getId();
 

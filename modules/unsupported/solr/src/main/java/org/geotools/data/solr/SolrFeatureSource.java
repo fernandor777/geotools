@@ -18,6 +18,7 @@
 package org.geotools.data.solr;
 
 import java.io.IOException;
+<<<<<<< 0784bb0fe0630fe1642c64bcf99415c10b959eed
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,6 +55,17 @@ import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
 import org.opengis.filter.Filter;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+
+import com.vividsolutions.jts.geom.Geometry;
+import java.text.SimpleDateFormat;
+
+import org.geotools.factory.CommonFactoryFinder;
+import org.geotools.feature.visitor.MaxVisitor;
+import org.geotools.feature.visitor.MinVisitor;
+import org.geotools.feature.visitor.NearestVisitor;
+import org.geotools.filter.SortByImpl;
+import org.opengis.feature.FeatureVisitor;
 import org.opengis.filter.FilterFactory;
 import org.opengis.filter.expression.Expression;
 import org.opengis.filter.expression.PropertyName;
@@ -64,8 +76,10 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 /** Feature source for SOLR datastore */
 public class SolrFeatureSource extends ContentFeatureSource {
 
-    /** Used to store native solr type for geometry attributes */
-    static final String KEY_SOLR_TYPE = "solr_type";
+    /**
+     * Used to store native solr type for geometry attributes
+     */
+    public static final String KEY_SOLR_TYPE = "solr_type";
 
     protected SimpleDateFormat dateFormatUTC = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
