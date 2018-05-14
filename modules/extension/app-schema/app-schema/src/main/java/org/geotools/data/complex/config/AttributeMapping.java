@@ -126,6 +126,8 @@ public class AttributeMapping implements Serializable {
      */
     private Map clientProperties;
 
+    private MultipleValue multipleValue;
+
     /**
      * Mapping of attributes with 1..N cardinality. Each data store is free to contribute is own
      * syntax (e.g. Solr multi values to support multi valuated fields).
