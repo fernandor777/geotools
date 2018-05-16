@@ -34,12 +34,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.geotools.data.DataAccess;
 import org.geotools.data.DataAccessFinder;
 import org.geotools.data.DataSourceException;
@@ -265,7 +267,10 @@ public class AppSchemaDataAccessConfigurator {
             for (DataAccess<FeatureType, Feature> dataAccess : sourceDataStores.values()) {
                 boolean usedDataAccess = false;
                 for (FeatureTypeMapping mapping : featureTypeMappings) {
-                    if (mapping.getSource().getDataStore() == dataAccess) {
+                    if (mapping.getSource().getDataStore() == dataAccess
+                            || (mapping.getIndexSource() != null
+                                    && Objects.equals(
+                                            mapping.getIndexSource().getDataStore(), dataAccess))) {
                         usedDataAccess = true;
                         break;
                     }
@@ -312,11 +317,15 @@ public class AppSchemaDataAccessConfigurator {
                                 crs,
                                 isDatabaseBackend);
 
+                // Instances Index layer FeatureSource
+                FeatureSource indexFeatureSource = getIndexFeatureSource(dto, sourceDataStores);
+
                 FeatureTypeMapping mapping;
 
                 mapping =
                         FeatureTypeMappingFactory.getInstance(
                                 featureSource,
+                                indexFeatureSource,
                                 target,
                                 dto.getDefaultGeometryXPath(),
                                 attMappings,
@@ -619,6 +628,9 @@ public class AppSchemaDataAccessConfigurator {
                 attMapping.setInstanceXpath(attDto.getInstancePath());
             }
 
+            // set External Index field, optional==null
+            attMapping.setIndexField(attDto.getIndexField());
+
             attMappings.add(attMapping);
         }
         return attMappings;
@@ -866,8 +878,6 @@ public class AppSchemaDataAccessConfigurator {
         final List<SourceDataStore> dsParams = config.getSourceDataStores();
         String id;
 
-        List<CustomSourceDataStore> extensions = CustomSourceDataStore.loadExtensions();
-
         for (SourceDataStore dsconfig : dsParams) {
             id = dsconfig.getId();
 
@@ -1061,5 +1071,28 @@ public class AppSchemaDataAccessConfigurator {
             resolvedParams.put(key, value);
         }
         return resolvedParams;
+    }
+
+    private FeatureSource<FeatureType, Feature> getIndexFeatureSource(
+            TypeMapping dto, Map<String, DataAccess<FeatureType, Feature>> sourceDataStores)
+            throws IOException {
+        String dsId = dto.getIndexDataStore();
+        String typeName = dto.getIndexTypeName();
+
+        // Index layer is optional
+        if (StringUtils.isEmpty(dsId) || StringUtils.isEmpty(typeName)) return null;
+
+        DataAccess<FeatureType, Feature> sourceDataStore = sourceDataStores.get(dsId);
+        if (sourceDataStore == null) {
+            throw new DataSourceException(
+                    "datastore " + dsId + " not found for type mapping " + dto);
+        }
+
+        Name name = Types.degloseName(typeName, namespaces);
+        FeatureSource fSource = sourceDataStore.getFeatureSource(name);
+        if (fSource instanceof XmlFeatureSource) {
+            ((XmlFeatureSource) fSource).setNamespaces(namespaces);
+        }
+        return fSource;
     }
 }
