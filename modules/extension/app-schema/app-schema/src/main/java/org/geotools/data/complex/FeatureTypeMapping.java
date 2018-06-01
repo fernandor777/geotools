@@ -52,6 +52,8 @@ public class FeatureTypeMapping {
      * access instead of a data store as the source data store
      */
     private FeatureSource<? extends FeatureType, ? extends Feature> source;
+    /** Index FeatureSource, optional * */
+    private FeatureSource<? extends FeatureType, ? extends Feature> indexSource;
 
     /** Encapsulates the name and type of target Features */
     private AttributeDescriptor target;
@@ -100,7 +102,19 @@ public class FeatureTypeMapping {
             List<AttributeMapping> mappings,
             NamespaceSupport namespaces,
             boolean isDenormalised) {
+        this(source, null, target, defaultGeometryXPath, mappings, namespaces, isDenormalised);
+    }
+
+    public FeatureTypeMapping(
+            FeatureSource<? extends FeatureType, ? extends Feature> source,
+            FeatureSource<? extends FeatureType, ? extends Feature> indexSource,
+            AttributeDescriptor target,
+            String defaultGeometryXPath,
+            List<AttributeMapping> mappings,
+            NamespaceSupport namespaces,
+            boolean isDenormalised) {
         this.source = source;
+        this.indexSource = indexSource;
         this.target = target;
         this.defaultGeometryXPath = defaultGeometryXPath;
         this.attributeMappings = new LinkedList<AttributeMapping>(mappings);
@@ -429,5 +443,14 @@ public class FeatureTypeMapping {
 
     public void setSource(FeatureSource<? extends FeatureType, ? extends Feature> source) {
         this.source = source;
+    }
+
+    public FeatureSource<? extends FeatureType, ? extends Feature> getIndexSource() {
+        return indexSource;
+    }
+
+    public void setIndexSource(
+            FeatureSource<? extends FeatureType, ? extends Feature> indexSource) {
+        this.indexSource = indexSource;
     }
 }

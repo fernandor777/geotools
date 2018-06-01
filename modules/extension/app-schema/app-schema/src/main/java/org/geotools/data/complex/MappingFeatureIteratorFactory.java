@@ -270,12 +270,15 @@ public class MappingFeatureIteratorFactory {
             } else {
                 // non database sources e.g. property data store
                 Filter filter = query.getFilter();
-                for(CustomSourceDataStore customSourceDataStore : CustomSourceDataStore.loadExtensions()) {
-                    iterator = customSourceDataStore.buildIterator(store, mapping, query, transaction);
+                for (CustomSourceDataStore customSourceDataStore :
+                        CustomSourceDataStore.loadExtensions()) {
+                    iterator =
+                            customSourceDataStore.buildIterator(store, mapping, query, transaction);
                 }
                 if (iterator == null) {
-                    iterator = new DataAccessMappingFeatureIterator(store, mapping, query,
-                            !Filter.INCLUDE.equals(filter), true);
+                    iterator =
+                            new DataAccessMappingFeatureIterator(
+                                    store, mapping, query, !Filter.INCLUDE.equals(filter), true);
                 }
                 // HACK HACK HACK
                 // experimental/temporary solution for isList subsetting by filtering
