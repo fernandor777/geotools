@@ -57,8 +57,6 @@ import org.opengis.filter.FilterFactory;
 import org.opengis.filter.sort.SortBy;
 import org.opengis.filter.sort.SortOrder;
 
-import com.vividsolutions.jts.geom.Geometry;
-
 /**
  * Datastore implementation for SOLR document <br>
  * The types provided from the datastore are obtained querying with distinct a specific SOLR field
