@@ -36,10 +36,5 @@ public class IndexUnmappingVisitor extends DuplicatingFilterVisitor {
             return expression;
         return new AttributeExpressionImpl(attMapping.getIndexField());
     }
-
-    //    @Override
-    //    public Object visit(BBOX filter, Object extraData) {
-    //        return null;
-    //    }
-
+    
 }
