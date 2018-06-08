@@ -5,6 +5,7 @@ import org.apache.commons.lang.StringUtils;
 import org.geotools.data.Query;
 import org.geotools.util.IndexQueryUtils;
 import org.opengis.filter.Filter;
+import org.opengis.filter.expression.Expression;
 
 public class IndexModeProcessor {
 
@@ -67,12 +68,13 @@ public class IndexModeProcessor {
     }
 
     private boolean equalsProperty(AttributeMapping mapping, String propertyName) {
-        if (mapping.getSourceExpression() != null) {
-            return mapping.getSourceExpression().toString().equals(propertyName);
-        } else if (mapping.getIdentifierExpression() != null) {
-            return mapping.getIdentifierExpression().toString().equals(propertyName);
-        }
-        return false;
+        return (equalsExpressions(mapping.getSourceExpression(), propertyName)
+                || equalsExpressions(mapping.getIdentifierExpression(), propertyName));
+    }
+
+    private boolean equalsExpressions(Expression expression, String propertyName) {
+        if (IndexQueryUtils.isExpressionEmpty(expression)) return false;
+        return expression.toString().equals(propertyName);
     }
 
     public static enum QueryIndexCoverage {

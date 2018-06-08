@@ -36,5 +36,4 @@ public class IndexUnmappingVisitor extends DuplicatingFilterVisitor {
             return expression;
         return new AttributeExpressionImpl(attMapping.getIndexField());
     }
-    
 }

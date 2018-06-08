@@ -49,6 +49,35 @@ public abstract class IndexedMappingFeatureIterator implements IMappingFeatureIt
         return newQuery;
     }
 
+    protected SortBy[] unrollSortBy(SortBy[] sortArray) {
+        if (sortArray == null) return null;
+        ArrayList<SortBy> unrolledSorts = new ArrayList<>();
+        FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
+        for (SortBy aSort : sortArray) {
+            SortBy newSort =
+                    ff.sort(
+                            unrollIndex(aSort.getPropertyName(), mapping).getPropertyName(),
+                            aSort.getSortOrder());
+            unrolledSorts.add(newSort);
+        }
+        return unrolledSorts.toArray(new SortBy[] {});
+    }
+
+    public static PropertyName unrollIndex(PropertyName expression, FeatureTypeMapping mapping) {
+        String targetXPath = expression.getPropertyName();
+        // replace the artificial DEFAULT_GEOMETRY property with the actual one
+        if (DEFAULT_GEOMETRY_LOCAL_NAME.equals(targetXPath)) {
+            targetXPath = mapping.getDefaultGeometryXPath();
+        }
+        NamespaceSupport namespaces = mapping.getNamespaces();
+        AttributeDescriptor root = mapping.getTargetFeature();
+        StepList simplifiedSteps = XPath.steps(root, targetXPath, namespaces);
+        AttributeMapping attMapping = mapping.getAttributeMapping(simplifiedSteps);
+        if (attMapping == null || StringUtils.isEmpty(attMapping.getIndexField()))
+            return expression;
+        return new AttributeExpressionImpl(attMapping.getIndexField());
+    }
+
     protected Filter unrollFilter(Filter filter) {
         IndexUnmappingVisitor visitor = new IndexUnmappingVisitor(mapping);
         Filter unrolledFilter = (Filter) filter.accept(visitor, null);
