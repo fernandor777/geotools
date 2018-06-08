@@ -18,5 +18,4 @@ public class IndexUnmappingVisitor extends DuplicatingFilterVisitor {
     public Object visit(PropertyName expression, Object extraData) {
         return IndexedMappingFeatureIterator.unrollIndex(expression, mapping);
     }
-    
 }

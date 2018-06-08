@@ -65,6 +65,7 @@ public abstract class IndexedMappingFeatureIterator implements IMappingFeatureIt
     }
 
     protected SortBy[] unrollSortBy(SortBy[] sortArray) {
+        if (sortArray == null) return null;
         ArrayList<SortBy> unrolledSorts = new ArrayList<>();
         FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
         for (SortBy aSort : sortArray) {

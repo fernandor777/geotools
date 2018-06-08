@@ -183,4 +183,9 @@ public final class JdbcMultipleValue extends AttributeExpressionImpl implements 
     public int hashCode() {
         return Objects.hash(super.hashCode(), sourceColumn, targetTable, targetColumn, targetValue);
     }
+
+    @Override
+    public String toString() {
+        return targetValue.toString();
+    }
 }
