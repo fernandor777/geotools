@@ -32,7 +32,7 @@ public class SelectedChannelTypeImpl implements SelectedChannelType {
 
     // private Expression contrastEnhancement;
     private ContrastEnhancement contrastEnhancement;
-    private String name = "channel";
+    private Expression name = Expression.NIL;
 
     public SelectedChannelTypeImpl() {
         this(CommonFactoryFinder.getFilterFactory(null));
@@ -56,15 +56,15 @@ public class SelectedChannelTypeImpl implements SelectedChannelType {
         }
     }
 
-    public String getChannelName() {
-        return name;
+    public Expression getChannelName() {
+    	return name;
     }
 
     public ContrastEnhancement getContrastEnhancement() {
         return contrastEnhancement;
     }
 
-    public void setChannelName(String name) {
+    public void setChannelName(Expression name) {
         this.name = name;
     }
 

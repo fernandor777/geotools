@@ -41,14 +41,14 @@ public interface SelectedChannelType extends org.opengis.style.SelectedChannelTy
      *
      * @param name name of the source channel
      */
-    public void setChannelName(String name);
+    public void setChannelName(Expression name);
 
     /**
      * Returns the channel's name.
      *
      * @return Source channel name
      */
-    public String getChannelName();
+    public Expression getChannelName();
 
     /** @deprecated Use {@link #setContrastEnhancement(ContrastEnhancement))} instead. */
     public void setContrastEnhancement(Expression gammaValue);
@@ -58,4 +58,5 @@ public interface SelectedChannelType extends org.opengis.style.SelectedChannelTy
     public ContrastEnhancement getContrastEnhancement();
 
     public void accept(org.geotools.styling.StyleVisitor visitor);
+    
 }

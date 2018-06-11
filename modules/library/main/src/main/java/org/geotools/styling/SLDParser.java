@@ -1408,9 +1408,15 @@ public class SLDParser {
             if (childName == null) {
                 childName = child.getNodeName();
             } else if (childName.equalsIgnoreCase("SourceChannelName")) {
-                if (child.getFirstChild() != null
-                        && child.getFirstChild().getNodeType() == Node.TEXT_NODE)
-                    symbol.setChannelName(getFirstChildValue(child));
+                if(child.getFirstChild() != null){
+                    if (child.getFirstChild().getNodeType() == Node.TEXT_NODE){
+                        symbol.setChannelName(ff.literal(getFirstChildValue(child)));
+                    } else if (child.getFirstChild().getNodeType() == Node.ELEMENT_NODE){
+                        ExpressionDOMParser parser = new ExpressionDOMParser(
+                                CommonFactoryFinder.getFilterFactory2(null));
+                        symbol.setChannelName(parser.expression(child));
+                    }
+                }
             } else if (childName.equalsIgnoreCase("ContrastEnhancement")) {
                 symbol.setContrastEnhancement(parseContrastEnhancement(child));
 
