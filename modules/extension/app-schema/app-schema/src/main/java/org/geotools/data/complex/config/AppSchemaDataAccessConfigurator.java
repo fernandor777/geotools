@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -268,7 +269,8 @@ public class AppSchemaDataAccessConfigurator {
                 for (FeatureTypeMapping mapping : featureTypeMappings) {
                     if (mapping.getSource().getDataStore() == dataAccess
                             || (mapping.getIndexSource() != null
-                                    && mapping.getIndexSource().getDataStore() == dataAccess)) {
+                                    && Objects.equals(
+                                            mapping.getIndexSource().getDataStore(), dataAccess))) {
                         usedDataAccess = true;
                         break;
                     }
