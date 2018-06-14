@@ -1,3 +1,19 @@
+/*
+ *    GeoTools - The Open Source Java GIS Toolkit
+ *    http://geotools.org
+ *
+ *    (C) 2018, Open Source Geospatial Foundation (OSGeo)
+ *
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU Lesser General Public
+ *    License as published by the Free Software Foundation;
+ *    version 2.1 of the License.
+ *
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    Lesser General Public License for more details.
+ */
 package org.geotools.data.complex;
 
 import java.io.IOException;
@@ -30,7 +46,7 @@ public class TotalIndexedMappingFeatureIterator extends IndexedMappingFeatureIte
             Query query,
             Filter unrolledFilter,
             Transaction transaction,
-            IndexModeProcessor indexModeProcessor) {
+            IndexQueryManager indexModeProcessor) {
         super(store, mapping, query, unrolledFilter, transaction, indexModeProcessor);
     }
 
@@ -55,6 +71,7 @@ public class TotalIndexedMappingFeatureIterator extends IndexedMappingFeatureIte
     private Query transformQueryToIdsOnly() {
         Query idsQuery = new Query(unrollIndexes(query));
         idsQuery.setProperties(Query.NO_PROPERTIES);
+        idsQuery.setTypeName(mapping.getIndexSource().getSchema().getTypeName());
         return idsQuery;
     }
 
@@ -70,7 +87,7 @@ public class TotalIndexedMappingFeatureIterator extends IndexedMappingFeatureIte
             idFilters.add(ff.equals(e, ff.literal(aid.getID())));
         }
         // create OR oprator with list, intead of using ff.id(idlist);
-        Filter nextFilter = ff.or(idFilters); 
+        Filter nextFilter = ff.or(idFilters);
         nextQuery.setFilter(nextFilter);
         try {
             sourceIterator =
@@ -87,10 +104,8 @@ public class TotalIndexedMappingFeatureIterator extends IndexedMappingFeatureIte
         while (numFeatures < MAX_FEATURES_ROUND && getIndexIterator().hasNext()) {
             Feature feature = getIndexIterator().next();
             FilterFactory ff = CommonFactoryFinder.getFilterFactory();
-            FeatureId fid =
-                    ff.featureId(
-                            this.getIdValue(
-                                    feature.getIdentifier()));
+            // FeatureId fid = ff.featureId(this.getIdValue(feature.getIdentifier()));
+            FeatureId fid = ff.featureId(feature.getIdentifier().getID());
             flist.add(fid);
             numFeatures++;
         }
