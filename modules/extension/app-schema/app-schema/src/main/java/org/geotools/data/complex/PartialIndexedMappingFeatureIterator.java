@@ -63,6 +63,11 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
         partialIQM = new PartialIndexQueryManager(mapping, query);
     }
 
+    /**
+     * Initialize the index feature iterator
+     *
+     * @throws IOException
+     */
     private void initializeIndexIterator() throws IOException {
         // get indexed Query and rebuild to fetch only id attributes:
         Query idQuery = transformQueryToIdsOnly();
@@ -70,6 +75,11 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
         indexIterator = mapping.getIndexSource().getFeatures(idQuery).features();
     }
 
+    /**
+     * Build the query for execute on index source
+     *
+     * @return Query
+     */
     private Query transformQueryToIdsOnly() {
         Query idsQuery = new Query(unrollIndexes(partialIQM.getIndexQuery()));
         idsQuery.setProperties(Query.NO_PROPERTIES);
@@ -77,6 +87,11 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
         return idsQuery;
     }
 
+    /**
+     * Initialize index feature iterator if needed, returns it
+     *
+     * @return
+     */
     private FeatureIterator<? extends Feature> getIndexIterator() {
         if (indexIterator == null) {
             try {
@@ -88,19 +103,27 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
         return indexIterator;
     }
 
+    /**
+     * Get String list of next ids from index for to set in an IN clause to source
+     *
+     * @return list of ids
+     */
     private List<String> getNextIdList() {
         List<String> result = new ArrayList<>();
         int count = 0;
         while (getIndexIterator().hasNext() && count < maxNumRound) {
-            result.add(getIndexIterator().next().getIdentifier().getID());
+            result.add(simplifyIndentifier(getIndexIterator().next()));
             count++;
         }
         return result;
     }
 
+    /** Initialize a new source feature iterator, using the remapped query */
     private void nextSourceIteratorInstance() {
         List<String> ids = getNextIdList();
+        // remap query with ids:
         Query nextQuery = partialIQM.buildCombinedQuery(ids);
+        // instance appschema feature iterator:
         try {
             sourceIterator =
                     MappingFeatureIteratorFactory.getInstance(

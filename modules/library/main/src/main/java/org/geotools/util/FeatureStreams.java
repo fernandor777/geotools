@@ -31,10 +31,14 @@ import org.opengis.feature.type.FeatureType;
  *
  * @author Fernando Miño, Geosolutions
  */
-public abstract class FeatureStreams {
-    
+public final class FeatureStreams {
+
+    private FeatureStreams() {}
+
     /**
-     * Converts FeatureCollection to Stream of Features
+     * Converts FeatureCollection to Stream of Features Use with try-with-resources clause for auto
+     * closing
+     *
      * @param fc
      * @return
      */

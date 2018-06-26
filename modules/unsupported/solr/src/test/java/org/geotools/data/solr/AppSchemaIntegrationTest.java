@@ -225,14 +225,14 @@ public final class AppSchemaIntegrationTest extends OnlineTestCase {
         appSchemaCacheDir.mkdir();
     }
 
-    private static void copyTestData(String baseFileName, File destDir) throws IOException {
+    private void copyTestData(String baseFileName, File destDir) throws IOException {
         destDir.mkdirs();
         FileUtils.copyFileToDirectory(
                 URLs.urlToFile(AppSchemaIntegrationTest.class.getResource(testData + baseFileName)),
                 destDir);
     }
 
-    /** solr.properties file required */
+    /** appschema.properties file required */
     @Override
     protected String getFixtureId() {
         return "appschema";

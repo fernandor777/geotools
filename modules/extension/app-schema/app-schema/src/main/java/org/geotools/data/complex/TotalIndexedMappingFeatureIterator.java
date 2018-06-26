@@ -18,21 +18,19 @@ package org.geotools.data.complex;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import org.geotools.data.Query;
 import org.geotools.data.Transaction;
-import org.geotools.factory.CommonFactoryFinder;
-import org.geotools.factory.GeoTools;
 import org.geotools.feature.FeatureIterator;
+import org.geotools.util.IndexQueryUtils;
 import org.opengis.feature.Feature;
 import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory;
-import org.opengis.filter.FilterFactory2;
-import org.opengis.filter.expression.Expression;
-import org.opengis.filter.identity.FeatureId;
 
+/**
+ * MappingFeatureIterator for full index coverage case
+ *
+ * @author Fernando Miño, Geosolutions
+ */
 public class TotalIndexedMappingFeatureIterator extends IndexedMappingFeatureIterator {
 
     private static int MAX_FEATURES_ROUND = 100;
@@ -76,19 +74,7 @@ public class TotalIndexedMappingFeatureIterator extends IndexedMappingFeatureIte
     }
 
     private void initNextSourceIndexRound() {
-        Set<FeatureId> idlist = getNextSourceIds();
-        // construct new Query with an unique IN function filter
-        Query nextQuery = new Query(query);
-        FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
-        // build list of equals filters
-        List<Filter> idFilters = new ArrayList<>();
-        for (FeatureId aid : idlist) {
-            Expression e = ff.property(mapping.getTargetFeature().getName());
-            idFilters.add(ff.equals(e, ff.literal(aid.getID())));
-        }
-        // create OR oprator with list, intead of using ff.id(idlist);
-        Filter nextFilter = ff.or(idFilters);
-        nextQuery.setFilter(nextFilter);
+        Query nextQuery = getNextSourceQuery();
         try {
             sourceIterator =
                     MappingFeatureIteratorFactory.getInstance(
@@ -98,18 +84,32 @@ public class TotalIndexedMappingFeatureIterator extends IndexedMappingFeatureIte
         }
     }
 
-    private Set<FeatureId> getNextSourceIds() {
+    /**
+     * Builds next query for execute in data source
+     *
+     * @return
+     */
+    private Query getNextSourceQuery() {
+        Query nextQuery = new Query(query);
+        Filter idInFilter = IndexQueryUtils.buildIdInExpression(getNextSourceIdList(), mapping);
+        nextQuery.setFilter(idInFilter);
+        return nextQuery;
+    }
+
+    /**
+     * Extracts next id list from index iterator
+     *
+     * @return list of id string
+     */
+    private List<String> getNextSourceIdList() {
         int numFeatures = 0;
-        Set<FeatureId> flist = new HashSet<>();
+        List<String> ids = new ArrayList<>();
         while (numFeatures < MAX_FEATURES_ROUND && getIndexIterator().hasNext()) {
             Feature feature = getIndexIterator().next();
-            FilterFactory ff = CommonFactoryFinder.getFilterFactory();
-            // FeatureId fid = ff.featureId(this.getIdValue(feature.getIdentifier()));
-            FeatureId fid = ff.featureId(feature.getIdentifier().getID());
-            flist.add(fid);
+            ids.add(simplifyIndentifier(feature));
             numFeatures++;
         }
-        return flist;
+        return ids;
     }
 
     private void closeIndexIterator() {

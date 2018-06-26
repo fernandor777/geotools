@@ -68,6 +68,6 @@ public abstract class IndexesTest {
     }
 
     protected Filter buildIdInExpression(List<String> idValues, FeatureTypeMapping mapping) {
-        return IndexQueryUtils.buildIdInExpressionSchema(idValues, mapping);
+        return IndexQueryUtils.buildIdInExpression(idValues, mapping);
     }
 }

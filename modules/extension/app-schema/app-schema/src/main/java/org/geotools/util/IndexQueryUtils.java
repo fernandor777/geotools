@@ -33,6 +33,7 @@ import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory;
+import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.expression.Expression;
 import org.opengis.filter.identity.FeatureId;
 
@@ -107,7 +108,7 @@ public abstract class IndexQueryUtils {
         return ff.or(idFilters);
     }
 
-    public static Filter buildIdInExpression(List<String> ids, FeatureTypeMapping mapping) {
+    public static Filter buildIdInExpressionIndex(List<String> ids, FeatureTypeMapping mapping) {
         FilterFactory ff = CommonFactoryFinder.getFilterFactory();
 
         List<Filter> idFilters = new ArrayList<>();
@@ -119,7 +120,7 @@ public abstract class IndexQueryUtils {
         return ff.or(idFilters);
     }
 
-    public static Filter buildIdInExpressionSchema(List<String> ids, FeatureTypeMapping mapping) {
+    public static Filter buildIdInExpressionOr(List<String> ids, FeatureTypeMapping mapping) {
         FilterFactory ff = CommonFactoryFinder.getFilterFactory();
 
         List<Filter> idFilters = new ArrayList<>();
@@ -133,5 +134,24 @@ public abstract class IndexQueryUtils {
                 });
 
         return ff.or(idFilters);
+    }
+
+    public static Filter buildIdInExpressionFunction(List<String> ids, FeatureTypeMapping mapping) {
+        FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
+        List<Expression> idExpressions = new ArrayList<>();
+        // add id field name
+        idExpressions.add(ff.property(mapping.getTargetFeature().getName().getLocalPart()));
+        // add values
+        ids.forEach(
+                idStr -> {
+                    idExpressions.add(ff.literal(idStr));
+                });
+        // create Filter = id IN (val1, val2, .... valn)
+        return ff.equals(
+                ff.function("in", idExpressions.toArray(new Expression[] {})), ff.literal(true));
+    }
+
+    public static Filter buildIdInExpression(List<String> ids, FeatureTypeMapping mapping) {
+        return buildIdInExpressionFunction(ids, mapping);
     }
 }
