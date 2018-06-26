@@ -50,7 +50,7 @@ public class TotalIndexedMappingFeatureIteratorTest extends IndexesTest {
                         "stationsIndexed")) {
             FeatureCollection<FeatureType, Feature> fcoll =
                     fsource.getMappedSource()
-                            .getFeatures(this.partialIndexedFilter_2idxfilterResults());
+                            .getFeatures(this.totalIndexedFilterCase());
             FeatureIterator<Feature> iterator = fcoll.features();
             assertTrue(iterator instanceof TotalIndexedMappingFeatureIterator);
             List<Feature> features =
@@ -64,8 +64,7 @@ public class TotalIndexedMappingFeatureIteratorTest extends IndexesTest {
     }
 
     /** Should returns 1, 2, 10, 12(11 on index) */
-    @Override
-    protected Filter partialIndexedFilter_2idxfilterResults() {
+    private Filter totalIndexedFilterCase() {
         FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
         List<Filter> filters =
                 Arrays.asList(

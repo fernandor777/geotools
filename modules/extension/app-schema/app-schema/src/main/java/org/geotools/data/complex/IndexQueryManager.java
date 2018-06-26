@@ -176,7 +176,7 @@ public class IndexQueryManager {
 
         private Filter buildCombinedFilter(List<String> ids) {
             // Ids in filter:
-            Filter idsIn = IndexQueryUtils.buildIdInExpressionSchema(ids, mapping);
+            Filter idsIn = IndexQueryUtils.buildIdInExpression(ids, mapping);
             // build new and/or operator
             IndexCombinedFilterTransformerVisitor visitor =
                     new IndexCombinedFilterTransformerVisitor(

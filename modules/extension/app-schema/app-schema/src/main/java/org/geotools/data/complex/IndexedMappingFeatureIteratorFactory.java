@@ -50,6 +50,12 @@ public class IndexedMappingFeatureIteratorFactory {
         this.indexModeProcessor = new IndexQueryManager(mapping, store.unrollQuery(query, mapping));
     }
 
+    /**
+     * Build IndexedMappingFeatureIterator instance for partial or total index query coverage.
+     * return null if no index coverage detected for the query
+     *
+     * @return IndexedMappingFeatureIterator instance
+     */
     public IndexedMappingFeatureIterator buildInstance() {
         if (indexModeProcessor.getIndexMode().equals(QueryIndexCoverage.NONE)) return null;
         else if (indexModeProcessor.getIndexMode().equals(QueryIndexCoverage.PARTIAL))

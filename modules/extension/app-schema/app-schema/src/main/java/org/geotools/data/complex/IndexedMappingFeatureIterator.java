@@ -29,16 +29,18 @@ import org.geotools.data.complex.filter.XPathUtil.StepList;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.GeoTools;
 import org.geotools.filter.AttributeExpressionImpl;
+import org.opengis.feature.Feature;
 import org.opengis.feature.type.AttributeDescriptor;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.expression.PropertyName;
-import org.opengis.filter.identity.FeatureId;
 import org.opengis.filter.sort.SortBy;
 import org.xml.sax.helpers.NamespaceSupport;
 
 /** @author Fernando Miño (Geosolutions) */
 public abstract class IndexedMappingFeatureIterator implements IMappingFeatureIterator {
+
+    protected FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
 
     protected final AppSchemaDataAccess store;
     protected final FeatureTypeMapping mapping;
@@ -115,7 +117,18 @@ public abstract class IndexedMappingFeatureIterator implements IMappingFeatureIt
         return unrolledFilter;
     }
 
-    protected String getIdValue(FeatureId fid) {
-        return fid.getID().substring(fid.getID().indexOf('.') + 1, fid.getID().length());
+    /**
+     * Simplifies id value, cutting "typename." part if exists
+     *
+     * @param feature
+     * @return
+     */
+    protected String simplifyIndentifier(Feature feature) {
+        String schemaPart = feature.getType().getName().getLocalPart() + ".";
+        String fid = feature.getIdentifier().getID();
+        if (fid.startsWith(schemaPart)) {
+            return fid.substring(schemaPart.length());
+        }
+        return fid;
     }
 }
