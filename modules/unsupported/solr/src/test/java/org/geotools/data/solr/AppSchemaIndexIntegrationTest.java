@@ -50,11 +50,11 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
 
     @Test
     public void testIndex() throws IOException {
-        testPartialindexCase();
-        testTotalindexCase();
+        partialindexCase();
+        totalindexCase();
     }
 
-    private void testTotalindexCase() throws IOException {
+    private void totalindexCase() throws IOException {
         FeatureCollection<FeatureType, Feature> fcoll =
                 this.mappingDataStore
                         .getFeatureSource(this.mappedTypeName)
@@ -69,7 +69,7 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
         assertEquals(features.get(3).getIdentifier().getID(), "11");
     }
 
-    private void testPartialindexCase() throws IOException {
+    private void partialindexCase() throws IOException {
         FeatureCollection<FeatureType, Feature> fcoll =
                 this.mappingDataStore
                         .getFeatureSource(this.mappedTypeName)
@@ -132,6 +132,14 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
 
     @Override
     protected void solrDataSetup() {}
+
+    private void loadPostgresSetup() {
+        String url =
+                "jdbc:postgresql://localhost/test"
+                        + fixture.getProperty(AppSchemaOnlineTestSupport.PG_HOST_KEY)
+                        + "/"
+                        + fixture.getProperty(AppSchemaOnlineTestSupport.PG_PORT_KEY);
+    }
 
     /** appschema_index.properties file required */
     @Override

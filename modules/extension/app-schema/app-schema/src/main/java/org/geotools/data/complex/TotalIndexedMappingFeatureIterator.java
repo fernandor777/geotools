@@ -17,11 +17,8 @@
 package org.geotools.data.complex;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import org.geotools.data.Query;
 import org.geotools.data.Transaction;
-import org.geotools.feature.FeatureIterator;
 import org.geotools.util.IndexQueryUtils;
 import org.opengis.feature.Feature;
 import org.opengis.filter.Filter;
@@ -33,11 +30,6 @@ import org.opengis.filter.Filter;
  */
 public class TotalIndexedMappingFeatureIterator extends IndexedMappingFeatureIterator {
 
-    private static int MAX_FEATURES_ROUND = 100;
-
-    private FeatureIterator<? extends Feature> indexIterator;
-    private FeatureIterator<? extends Feature> sourceIterator;
-
     public TotalIndexedMappingFeatureIterator(
             AppSchemaDataAccess store,
             FeatureTypeMapping mapping,
@@ -48,32 +40,9 @@ public class TotalIndexedMappingFeatureIterator extends IndexedMappingFeatureIte
         super(store, mapping, query, unrolledFilter, transaction, indexModeProcessor);
     }
 
-    private FeatureIterator<? extends Feature> getIndexIterator() {
-        if (indexIterator == null) {
-            try {
-                initializeIndexIterator();
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
-        }
-        return indexIterator;
-    }
-
-    private void initializeIndexIterator() throws IOException {
-        // rebuild Query to fetch only id attributes:
-        Query idQuery = transformQueryToIdsOnly();
-        // get iterator on new query
-        indexIterator = mapping.getIndexSource().getFeatures(idQuery).features();
-    }
-
-    private Query transformQueryToIdsOnly() {
-        Query idsQuery = new Query(unrollIndexes(query));
-        idsQuery.setProperties(Query.NO_PROPERTIES);
-        idsQuery.setTypeName(mapping.getIndexSource().getSchema().getTypeName());
-        return idsQuery;
-    }
-
+    /** Initialize next FeatureIterator from AppSchema data store */
     private void initNextSourceIndexRound() {
+        // get re-mapped query with IN ids from index result
         Query nextQuery = getNextSourceQuery();
         try {
             sourceIterator =
@@ -96,25 +65,13 @@ public class TotalIndexedMappingFeatureIterator extends IndexedMappingFeatureIte
         return nextQuery;
     }
 
-    /**
-     * Extracts next id list from index iterator
-     *
-     * @return list of id string
-     */
-    private List<String> getNextSourceIdList() {
-        int numFeatures = 0;
-        List<String> ids = new ArrayList<>();
-        while (numFeatures < MAX_FEATURES_ROUND && getIndexIterator().hasNext()) {
-            Feature feature = getIndexIterator().next();
-            ids.add(simplifyIndentifier(feature));
-            numFeatures++;
-        }
-        return ids;
-    }
-
     private void closeIndexIterator() {
         if (indexIterator == null) return;
-        indexIterator.close();
+        try {
+            indexIterator.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void closeSourceIterator() {

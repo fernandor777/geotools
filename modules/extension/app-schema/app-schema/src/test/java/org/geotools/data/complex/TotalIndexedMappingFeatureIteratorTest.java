@@ -49,8 +49,7 @@ public class TotalIndexedMappingFeatureIteratorTest extends IndexesTest {
                         "http://www.stations.org/1.0",
                         "stationsIndexed")) {
             FeatureCollection<FeatureType, Feature> fcoll =
-                    fsource.getMappedSource()
-                            .getFeatures(this.totalIndexedFilterCase());
+                    fsource.getMappedSource().getFeatures(this.totalIndexedFilterCase());
             FeatureIterator<Feature> iterator = fcoll.features();
             assertTrue(iterator instanceof TotalIndexedMappingFeatureIterator);
             List<Feature> features =
@@ -60,6 +59,24 @@ public class TotalIndexedMappingFeatureIteratorTest extends IndexesTest {
             assertEquals(features.get(1).getIdentifier().getID(), "st.2");
             assertEquals(features.get(2).getIdentifier().getID(), "st.10");
             assertEquals(features.get(3).getIdentifier().getID(), "st.11");
+        }
+    }
+
+    @Test
+    public void testGetFid() throws IOException {
+        try (TestFeatureSource fsource =
+                new TestFeatureSource(
+                        "/test-data/index/",
+                        "stationsIndexed.xml",
+                        "http://www.stations.org/1.0",
+                        "stationsIndexed")) {
+            FeatureCollection<FeatureType, Feature> fcoll =
+                    fsource.getMappedSource().getFeatures(this.totalIndexedFilterCase());
+            FeatureIterator<Feature> iterator = fcoll.features();
+            assertTrue(iterator instanceof TotalIndexedMappingFeatureIterator);
+            TotalIndexedMappingFeatureIterator titer =
+                    (TotalIndexedMappingFeatureIterator) iterator;
+            assertEquals("ID", titer.getFidAttrMap().getIndexField());
         }
     }
 

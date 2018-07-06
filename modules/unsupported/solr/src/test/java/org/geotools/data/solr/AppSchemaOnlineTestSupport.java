@@ -50,8 +50,14 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 public abstract class AppSchemaOnlineTestSupport extends OnlineTestCase {
+    // Postgres configs:
+    public static final String PG_HOST_KEY = "pg_host";
+    public static final String PG_PORT_KEY = "pg_port";
+    public static final String PG_DATABASE_KEY = "pg_db";
+    public static final String PG_USER_KEY = "pg_user";
+    public static final String PG_PASS_KEY = "pg_pass";
     // Solr configs:
-    protected String SOLR_URL_KEY = "solr_url";
+    public static final String SOLR_URL_KEY = "solr_url";
     protected String CORE_NAME = "stations";
     protected String typesFileName = "solr_types.xml";
     protected String solrDataFilename = "stationsData.xml";
@@ -109,7 +115,7 @@ public abstract class AppSchemaOnlineTestSupport extends OnlineTestCase {
         mappingDataStore = DataAccessFinder.getDataStore(dsParams);
     }
 
-    private String getSolrCoreURL() {
+    protected String getSolrCoreURL() {
         return fixture.getProperty(SOLR_URL_KEY) + "/" + CORE_NAME;
     }
 

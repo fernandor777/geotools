@@ -78,9 +78,9 @@ public class IndexedFilterDetectorVisitor extends DefaultFilterVisitor {
     }
 
     /**
-     * Unrolled implementation
+     * checks if Filter is fully indexed
      *
-     * @param filter
+     * @param filter unrolled filter
      * @return
      */
     protected boolean isFullyIndexed(Filter filter) {
