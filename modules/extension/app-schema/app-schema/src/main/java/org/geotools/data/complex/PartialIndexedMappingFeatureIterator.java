@@ -22,7 +22,6 @@ import java.util.List;
 import org.geotools.data.Query;
 import org.geotools.data.Transaction;
 import org.geotools.data.complex.IndexQueryManager.PartialIndexQueryManager;
-import org.geotools.feature.FeatureIterator;
 import org.opengis.feature.Feature;
 import org.opengis.filter.Filter;
 
@@ -35,8 +34,6 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
 
     private int maxNumRound = 100;
 
-    private FeatureIterator<? extends Feature> indexIterator;
-    private FeatureIterator<? extends Feature> sourceIterator;
     private int sourceFeaturesCounter = 0;
     private PartialIndexQueryManager partialIQM;
 
@@ -64,43 +61,16 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
     }
 
     /**
-     * Initialize the index feature iterator
-     *
-     * @throws IOException
-     */
-    private void initializeIndexIterator() throws IOException {
-        // get indexed Query and rebuild to fetch only id attributes:
-        Query idQuery = transformQueryToIdsOnly();
-        // get iterator on new query
-        indexIterator = mapping.getIndexSource().getFeatures(idQuery).features();
-    }
-
-    /**
      * Build the query for execute on index source
      *
      * @return Query
      */
-    private Query transformQueryToIdsOnly() {
+    @Override
+    protected Query transformQueryToIdsOnly() {
         Query idsQuery = new Query(unrollIndexes(partialIQM.getIndexQuery()));
-        idsQuery.setProperties(Query.NO_PROPERTIES);
+        idsQuery.setProperties(getIndexQueryProperties());
         idsQuery.setTypeName(mapping.getIndexSource().getSchema().getTypeName());
         return idsQuery;
-    }
-
-    /**
-     * Initialize index feature iterator if needed, returns it
-     *
-     * @return
-     */
-    private FeatureIterator<? extends Feature> getIndexIterator() {
-        if (indexIterator == null) {
-            try {
-                initializeIndexIterator();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return indexIterator;
     }
 
     /**
@@ -112,7 +82,7 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
         List<String> result = new ArrayList<>();
         int count = 0;
         while (getIndexIterator().hasNext() && count < maxNumRound) {
-            result.add(simplifyIndentifier(getIndexIterator().next()));
+            result.add(getIndexIterator().next());
             count++;
         }
         return result;
@@ -135,7 +105,11 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
 
     private void closeIndexIterator() {
         if (indexIterator == null) return;
-        indexIterator.close();
+        try {
+            indexIterator.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void closeSourceIterator() {
@@ -168,6 +142,7 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
     @Override
     public Feature next() {
         if (hasNext()) {
+            // sum 1 to counter
             sourceFeaturesCounter++;
             return sourceIterator.next();
         } else return null;

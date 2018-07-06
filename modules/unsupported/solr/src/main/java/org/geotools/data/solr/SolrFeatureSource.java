@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
@@ -43,6 +44,7 @@ import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.feature.visitor.MaxVisitor;
 import org.geotools.feature.visitor.MinVisitor;
 import org.geotools.feature.visitor.NearestVisitor;
+import org.geotools.feature.visitor.UniqueVisitor;
 import org.geotools.filter.FilterAttributeExtractor;
 import org.geotools.filter.SortByImpl;
 import org.geotools.filter.visitor.PostPreProcessFilterSplittingVisitor;
@@ -226,6 +228,55 @@ public class SolrFeatureSource extends ContentFeatureSource {
         return reader;
     }
 
+    /**
+     * Returns a List with distinct-unique values
+     *
+     * @param query
+     * @param visitor with unique field setting
+     * @return List with distinct unique values
+     * @throws IOException
+     */
+    protected List<String> getUniqueScalarList(Query query, UniqueVisitor visitor)
+            throws IOException {
+        List<String> values;
+        try {
+            SolrDataStore store = getDataStore();
+            Filter[] split = splitFilter(query.getFilter(), this);
+            Filter preFilter = split[0];
+            Filter postFilter = split[1];
+            Query preQuery = new Query(query);
+            preQuery.setFilter(preFilter);
+            // set start and maz results in query
+            preQuery.setStartIndex(visitor.getStartIndex());
+            preQuery.setMaxFeatures(visitor.getMaxFeatures());
+
+            HttpSolrClient solrServer = store.getSolrServer();
+            SolrQuery q = store.selectUniqueValues(getSchema(), preQuery, visitor);
+            QueryResponse rsp = solrServer.query(q);
+            values =
+                    rsp.getGroupResponse()
+                            .getValues()
+                            .stream()
+                            .filter(
+                                    g ->
+                                            g.getName()
+                                                    .equals(
+                                                            visitor.getExpression()
+                                                                    .evaluate(null, String.class)))
+                            .flatMap(gr -> gr.getValues().stream())
+                            .map(g -> g.getGroupValue())
+                            .collect(Collectors.toList());
+
+        } catch (Throwable e) {
+            if (e instanceof Error) {
+                throw (Error) e;
+            } else {
+                throw (IOException) new IOException().initCause(e);
+            }
+        }
+        return values;
+    }
+
     @Override
     protected SimpleFeatureType buildFeatureType() throws IOException {
         SimpleFeatureTypeBuilder tb = new SimpleFeatureTypeBuilder();
@@ -380,6 +431,12 @@ public class SolrFeatureSource extends ContentFeatureSource {
             return false;
         }
 
+        // UniqueVisitor handling:
+        if (visitor instanceof UniqueVisitor) {
+            handleUniqueVisitor(query, (UniqueVisitor) visitor);
+            return true;
+        }
+
         SortBy sortBy;
 
         if (visitor instanceof MinVisitor) {
@@ -448,5 +505,16 @@ public class SolrFeatureSource extends ContentFeatureSource {
         }
 
         return true;
+    }
+
+    /**
+     * Process UniqueVisitor with group on solr query
+     *
+     * @param query
+     * @param visitor
+     * @throws IOException
+     */
+    private void handleUniqueVisitor(Query query, UniqueVisitor visitor) throws IOException {
+        visitor.setValue(getUniqueScalarList(query, visitor));
     }
 }

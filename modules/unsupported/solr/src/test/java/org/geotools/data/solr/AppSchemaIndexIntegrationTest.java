@@ -133,6 +133,14 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
     @Override
     protected void solrDataSetup() {}
 
+    private void loadPostgresSetup() {
+        String url =
+                "jdbc:postgresql://localhost/test"
+                        + fixture.getProperty(AppSchemaOnlineTestSupport.PG_HOST_KEY)
+                        + "/"
+                        + fixture.getProperty(AppSchemaOnlineTestSupport.PG_PORT_KEY);
+    }
+
     /** appschema_index.properties file required */
     @Override
     protected String getFixtureId() {

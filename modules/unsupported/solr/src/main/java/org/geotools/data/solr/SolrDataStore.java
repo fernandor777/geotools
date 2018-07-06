@@ -40,6 +40,7 @@ import org.geotools.data.store.ContentFeatureSource;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.Hints;
 import org.geotools.feature.NameImpl;
+import org.geotools.feature.visitor.UniqueVisitor;
 import org.geotools.filter.FilterCapabilities;
 import org.geotools.filter.visitor.SimplifyingFilterVisitor;
 import org.opengis.feature.simple.SimpleFeatureType;
@@ -369,6 +370,26 @@ public class SolrDataStore extends ContentDataStore {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, e.getMessage(), e);
         }
+        return query;
+    }
+
+    /**
+     * Create a group by field Solr query
+     *
+     * @param featureType
+     * @param q
+     * @param visitor UniqueVisitor with group settings
+     * @return Solr query
+     */
+    protected SolrQuery selectUniqueValues(
+            SimpleFeatureType featureType, Query q, UniqueVisitor visitor) {
+        SolrQuery query = select(featureType, q);
+        // normal fields empty
+        query.setFields(new String[] {});
+        // set group data
+        query.setParam("group", true);
+        query.setParam("group.field", visitor.getExpression().evaluate(null, String.class));
+        query.setParam("group.limit", "0");
         return query;
     }
 

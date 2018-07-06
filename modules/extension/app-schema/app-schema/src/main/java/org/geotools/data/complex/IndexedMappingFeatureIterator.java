@@ -18,18 +18,28 @@ package org.geotools.data.complex;
 
 import static org.geotools.data.complex.ComplexFeatureConstants.DEFAULT_GEOMETRY_LOCAL_NAME;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.geotools.data.Query;
 import org.geotools.data.Transaction;
+import org.geotools.data.complex.IndexIdIterator.IndexFeatureIdIterator;
+import org.geotools.data.complex.IndexIdIterator.IndexUniqueVisitorIterator;
 import org.geotools.data.complex.IndexQueryManager.QueryIndexCoverage;
 import org.geotools.data.complex.filter.IndexUnmappingVisitor;
 import org.geotools.data.complex.filter.XPath;
+import org.geotools.data.complex.filter.XPathUtil;
 import org.geotools.data.complex.filter.XPathUtil.StepList;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.GeoTools;
+import org.geotools.feature.FeatureCollection;
+import org.geotools.feature.FeatureIterator;
 import org.geotools.filter.AttributeExpressionImpl;
 import org.opengis.feature.Feature;
+import org.opengis.feature.simple.SimpleFeature;
+import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
@@ -40,6 +50,8 @@ import org.xml.sax.helpers.NamespaceSupport;
 /** @author Fernando Miño (Geosolutions) */
 public abstract class IndexedMappingFeatureIterator implements IMappingFeatureIterator {
 
+    private static int MAX_FEATURES_ROUND = 100;
+
     protected FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
 
     protected final AppSchemaDataAccess store;
@@ -47,6 +59,9 @@ public abstract class IndexedMappingFeatureIterator implements IMappingFeatureIt
     protected final Query query;
     protected final Filter unrolledFilter;
     protected final Transaction transaction;
+
+    protected IndexIdIterator indexIterator;
+    protected FeatureIterator<? extends Feature> sourceIterator;
 
     protected IndexQueryManager indexModeProc;
     protected QueryIndexCoverage queryMode;
@@ -130,5 +145,88 @@ public abstract class IndexedMappingFeatureIterator implements IMappingFeatureIt
             return fid.substring(schemaPart.length());
         }
         return fid;
+    }
+
+    public StepList getFidStepList() {
+        return XPathUtil.rootElementSteps(mapping.getTargetFeature(), mapping.namespaces);
+    }
+
+    public AttributeMapping getFidAttrMap() {
+        return mapping.getAttributeMapping(getFidStepList());
+    }
+
+    public String getFidIndexName() {
+        return getFidAttrMap().getIndexField();
+    }
+
+    protected boolean isDenormalized() {
+        if (!"id".equals(getFidIndexName().toLowerCase())) return true;
+        return false;
+    }
+
+    protected IndexIdIterator getIndexIterator() {
+        if (indexIterator == null) {
+            try {
+                initializeIndexIterator();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+        return indexIterator;
+    }
+
+    /**
+     * Initialize the index FeatureCollection and iterator
+     *
+     * @throws IOException
+     */
+    protected void initializeIndexIterator() throws IOException {
+        // rebuild Query to fetch only id attributes:
+        Query idQuery = transformQueryToIdsOnly();
+        FeatureCollection<SimpleFeatureType, SimpleFeature> fc =
+                mapping.getIndexSource().getFeatures(idQuery);
+        // if denormalized index:
+        if (isDenormalized()) {
+            indexIterator = new IndexUniqueVisitorIterator(fc, idQuery, getFidIndexName());
+        } else {
+            indexIterator = new IndexFeatureIdIterator(fc.features());
+        }
+    }
+
+    /**
+     * Convert query to retrieve only id field, no other fields
+     *
+     * @return converted Query
+     */
+    protected Query transformQueryToIdsOnly() {
+        Query idsQuery = new Query(unrollIndexes(query));
+        idsQuery.setProperties(getIndexQueryProperties());
+        idsQuery.setTypeName(mapping.getIndexSource().getSchema().getTypeName());
+        return idsQuery;
+    }
+
+    protected List<PropertyName> getIndexQueryProperties() {
+        return Arrays.asList(new PropertyName[] {ff.property(getFidIndexName())});
+        // if denormalized we will need get the otherIdField
+        //        if (isDenormalized()) {
+        //            return Arrays.asList(new PropertyName[] {ff.property(getFidIndexName())});
+        //        } else {
+        //            return Query.NO_PROPERTIES;
+        //        }
+    }
+
+    /**
+     * Extracts next id list from index iterator
+     *
+     * @return list of id string
+     */
+    protected List<String> getNextSourceIdList() {
+        int numFeatures = 0;
+        List<String> ids = new ArrayList<>();
+        while (numFeatures < MAX_FEATURES_ROUND && getIndexIterator().hasNext()) {
+            ids.add(indexIterator.next());
+            numFeatures++;
+        }
+        return ids;
     }
 }
