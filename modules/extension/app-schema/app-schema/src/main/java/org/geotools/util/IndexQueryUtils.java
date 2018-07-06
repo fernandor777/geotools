@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import org.geotools.data.DataUtilities;
 import org.geotools.data.Query;
 import org.geotools.data.complex.AttributeMapping;
@@ -28,18 +27,22 @@ import org.geotools.data.complex.FeatureTypeMapping;
 import org.geotools.data.complex.filter.XPath;
 import org.geotools.data.complex.filter.XPathUtil.StepList;
 import org.geotools.factory.CommonFactoryFinder;
-import org.geotools.feature.FeatureCollection;
-import org.opengis.feature.Feature;
-import org.opengis.feature.type.FeatureType;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.expression.Expression;
-import org.opengis.filter.identity.FeatureId;
 
 /** @author Fernando Miño - Geosolutions */
-public abstract class IndexQueryUtils {
+public final class IndexQueryUtils {
 
+    private IndexQueryUtils() {}
+
+    /**
+     * Extracts List of Sort attributes names from Query
+     *
+     * @param query
+     * @return List of Sort attributes names
+     */
     public static List<String> getAttributesOnSort(Query query) {
         List<String> result = new ArrayList<>();
         if (query.getSortBy() == null) return result;
@@ -49,21 +52,48 @@ public abstract class IndexQueryUtils {
         return result;
     }
 
+    /**
+     * Extracts List of attributes names from Filter
+     *
+     * @param filter
+     * @return List of attributes names
+     */
     public static List<String> getAttributesOnFilter(Filter filter) {
         String[] attrs = DataUtilities.attributeNames(filter);
         return new ArrayList<String>(Arrays.asList(attrs));
     }
 
+    /**
+     * Checks if Expression is empty or Null
+     *
+     * @param expression
+     * @return
+     */
     public static boolean isExpressionEmpty(Expression expression) {
         if (expression == null || Expression.NIL.equals(expression)) return true;
         return false;
     }
 
+    /**
+     * Checks if property name is equals to source/identifier expression in attribute mapping
+     *
+     * @param mapping
+     * @param propertyName
+     * @return
+     */
     public static boolean equalsProperty(AttributeMapping mapping, String propertyName) {
         return (equalsPropertyExpression(mapping.getSourceExpression(), propertyName)
                 || equalsPropertyExpression(mapping.getIdentifierExpression(), propertyName));
     }
 
+    /**
+     * Compare if mapping-xpath == attMapping
+     *
+     * @param mapping
+     * @param attMapping
+     * @param xpath
+     * @return
+     */
     public static boolean equalsXpath(
             FeatureTypeMapping mapping, AttributeMapping attMapping, String xpath) {
         StepList simplifiedSteps =
@@ -71,6 +101,13 @@ public abstract class IndexQueryUtils {
         return Objects.equals(attMapping, simplifiedSteps);
     }
 
+    /**
+     * Compare if expression == propertyName
+     *
+     * @param expression
+     * @param propertyName
+     * @return
+     */
     public static boolean equalsPropertyExpression(Expression expression, String propertyName) {
         if (IndexQueryUtils.isExpressionEmpty(expression)) return false;
         String[] name = DataUtilities.attributeNames(expression);
@@ -78,48 +115,37 @@ public abstract class IndexQueryUtils {
         return Objects.equals(name[0], propertyName);
     }
 
+    /**
+     * Checks if all unrolled properties are indexed in mapping
+     *
+     * @param properties
+     * @param mapping
+     * @return
+     */
     public static boolean checkAllUnrolledPropertiesIndexed(
             List<String> properties, FeatureTypeMapping mapping) {
         return !properties.stream().anyMatch(p -> mapping.getIndexAttributeNameUnrolled(p) == null);
     }
 
+    /**
+     * Checks if all properties are indexed in mapping
+     *
+     * @param properties
+     * @param mapping
+     * @return
+     */
     public static boolean checkAllPropertiesIndexed(
             List<String> properties, FeatureTypeMapping mapping) {
         return !properties.stream().anyMatch(p -> mapping.getIndexAttributeName(p) == null);
     }
 
-    public static Filter buildIdInExpression(
-            FeatureCollection<? extends FeatureType, ? extends Feature> featureCollection,
-            FeatureTypeMapping mapping) {
-        FilterFactory ff = CommonFactoryFinder.getFilterFactory();
-
-        // build filter list
-        List<Filter> idFilters = new ArrayList<>();
-        FeatureStreams.toFeatureStream(featureCollection)
-                .map(Feature::getIdentifier)
-                .map(FeatureId::getID)
-                .collect(Collectors.toList())
-                .forEach(
-                        idStr -> {
-                            idFilters.add(
-                                    ff.equals(mapping.getFeatureIdExpression(), ff.literal(idStr)));
-                        });
-
-        return ff.or(idFilters);
-    }
-
-    public static Filter buildIdInExpressionIndex(List<String> ids, FeatureTypeMapping mapping) {
-        FilterFactory ff = CommonFactoryFinder.getFilterFactory();
-
-        List<Filter> idFilters = new ArrayList<>();
-        ids.forEach(
-                idStr -> {
-                    idFilters.add(ff.equals(mapping.getFeatureIdExpression(), ff.literal(idStr)));
-                });
-
-        return ff.or(idFilters);
-    }
-
+    /**
+     * Builds an OR operator comparing Identifier with ids list
+     *
+     * @param ids
+     * @param mapping
+     * @return Or Filter
+     */
     public static Filter buildIdInExpressionOr(List<String> ids, FeatureTypeMapping mapping) {
         FilterFactory ff = CommonFactoryFinder.getFilterFactory();
 
@@ -136,6 +162,13 @@ public abstract class IndexQueryUtils {
         return ff.or(idFilters);
     }
 
+    /**
+     * Builds a mapping->identifier IN (ids...) like function/clause
+     *
+     * @param ids
+     * @param mapping
+     * @return Filter IN function
+     */
     public static Filter buildIdInExpressionFunction(List<String> ids, FeatureTypeMapping mapping) {
         FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
         List<Expression> idExpressions = new ArrayList<>();
@@ -151,6 +184,13 @@ public abstract class IndexQueryUtils {
                 ff.function("in", idExpressions.toArray(new Expression[] {})), ff.literal(true));
     }
 
+    /**
+     * Builds a mapping->identifier IN (ids...) like function/clause
+     *
+     * @param ids
+     * @param mapping
+     * @return Filter IN function
+     */
     public static Filter buildIdInExpression(List<String> ids, FeatureTypeMapping mapping) {
         return buildIdInExpressionFunction(ids, mapping);
     }

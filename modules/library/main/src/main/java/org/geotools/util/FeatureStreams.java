@@ -52,6 +52,12 @@ public final class FeatureStreams {
                         });
     }
 
+    /**
+     * Iterator Wrapper for use on streams
+     *
+     * @author Fernando Miño, Geosolutions
+     * @param <F>
+     */
     public static class StreamFeatureIterator<F extends Feature>
             implements Closeable, Iterator<F>, FeatureIterator<F> {
 
