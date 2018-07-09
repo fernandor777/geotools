@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.geotools.data.Query;
 import org.geotools.data.complex.PartialIndexedMappingFeatureIterator;
 import org.geotools.data.complex.TotalIndexedMappingFeatureIterator;
 import org.geotools.data.complex.config.Types;
@@ -52,6 +53,7 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
     public void testIndex() throws IOException {
         partialindexCase();
         totalindexCase();
+        partialindexPaginationCase();
     }
 
     private void totalindexCase() throws IOException {
@@ -84,6 +86,23 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
         assertEquals(features.get(3).getIdentifier().getID(), "6");
         assertEquals(features.get(4).getIdentifier().getID(), "10");
         assertEquals(features.get(5).getIdentifier().getID(), "11");
+    }
+
+    private void partialindexPaginationCase() throws IOException {
+        // build query with limits and sort
+        Query q1 = new Query(this.mappedTypeName.getLocalPart(), partialIndexedFilter());
+        q1.setStartIndex(2);
+        q1.setMaxFeatures(3);
+        // AppSchema seems have a bug with sort?
+        // q1.setSortBy(new SortBy[] {ff.sort(this.attId, SortOrder.ASCENDING)});
+        // retrieve features:
+        FeatureCollection<FeatureType, Feature> fcoll =
+                this.mappingDataStore.getFeatureSource(this.mappedTypeName).getFeatures(q1);
+        List<Feature> features = FeatureStreams.toFeatureStream(fcoll).collect(Collectors.toList());
+        assertEquals(3, features.size());
+        assertEquals(features.get(0).getIdentifier().getID(), "5");
+        assertEquals(features.get(1).getIdentifier().getID(), "6");
+        assertEquals(features.get(2).getIdentifier().getID(), "10");
     }
 
     @Override

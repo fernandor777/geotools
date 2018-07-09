@@ -148,7 +148,7 @@
                     <idExpression>
                         <OCQL>id</OCQL>
                     </idExpression>
-                    <indexField>id</indexField>
+                    <indexField>otherid</indexField>
                 </AttributeMapping>
                 <AttributeMapping>
                     <targetAttribute>st:name</targetAttribute>

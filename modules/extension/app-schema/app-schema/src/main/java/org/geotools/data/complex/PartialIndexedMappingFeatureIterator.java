@@ -36,6 +36,7 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
 
     private int sourceFeaturesCounter = 0;
     private PartialIndexQueryManager partialIQM;
+    private boolean skipped = false;
 
     public PartialIndexedMappingFeatureIterator(
             AppSchemaDataAccess store,
@@ -61,7 +62,8 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
     }
 
     /**
-     * Build the query for execute on index source
+     * Build the query for execute on index source partial Implementation manages pagination by
+     * itself, so remove bounds from query
      *
      * @return Query
      */
@@ -70,6 +72,8 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
         Query idsQuery = new Query(unrollIndexes(partialIQM.getIndexQuery()));
         idsQuery.setProperties(getIndexQueryProperties());
         idsQuery.setTypeName(mapping.getIndexSource().getSchema().getTypeName());
+        idsQuery.setStartIndex(null);
+        idsQuery.setMaxFeatures(Integer.MAX_VALUE);
         return idsQuery;
     }
 
@@ -93,6 +97,8 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
         List<String> ids = getNextIdList();
         // remap query with ids:
         Query nextQuery = partialIQM.buildCombinedQuery(ids);
+        nextQuery.setStartIndex(null);
+        nextQuery.setMaxFeatures(Integer.MAX_VALUE);
         // instance appschema feature iterator:
         try {
             sourceIterator =
@@ -117,10 +123,36 @@ public class PartialIndexedMappingFeatureIterator extends IndexedMappingFeatureI
         sourceIterator.close();
     }
 
+    /**
+     * Iterate until startIndex
+     *
+     * @param start
+     */
+    private boolean fastForward(int start) {
+        while (sourceFeaturesCounter < start) {
+            if (hasNext()) {
+                next();
+            } else {
+                return false;
+            }
+        }
+        return hasNext();
+    }
+
     @Override
     public boolean hasNext() {
         // if sourceIterator is instanced and hasNext, return true
         if (sourceIterator != null && sourceIterator.hasNext()) {
+            // if feature counter is bigger than limits, no more results.
+            int start = query.getStartIndex() != null ? query.getStartIndex() : 0;
+            if (sourceFeaturesCounter >= (start + query.getMaxFeatures())) {
+                return false;
+            }
+            // if feature counter is lower than limits, fast skip to first requested result
+            if (sourceFeaturesCounter < start && !skipped) {
+                skipped = true;
+                return fastForward(start);
+            }
             return true;
         }
         // if sourceiterator is not instanced or has not next
