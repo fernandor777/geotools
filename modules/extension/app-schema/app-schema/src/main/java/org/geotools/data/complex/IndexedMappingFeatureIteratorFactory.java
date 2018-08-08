@@ -47,7 +47,7 @@ public class IndexedMappingFeatureIteratorFactory {
         this.query = query;
         this.unrolledFilter = unrolledFilter;
         this.transaction = transaction;
-        this.indexModeProcessor = new IndexQueryManager(mapping, store.unrollQuery(query, mapping));
+        this.indexModeProcessor = new IndexQueryManager(mapping, query);
     }
 
     /**

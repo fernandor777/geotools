@@ -23,9 +23,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import javax.xml.namespace.QName;
-import org.apache.commons.lang.StringUtils;
 import org.geotools.data.FeatureSource;
 import org.geotools.data.complex.config.Types;
 import org.geotools.data.complex.filter.XPath;
@@ -485,34 +483,11 @@ public class FeatureTypeMapping {
      * @param propertyName
      * @return Index attribute name
      */
-    public String getIndexAttributeNameUnrolled(String propertyName) {
-        Optional<AttributeMapping> attrMap =
-                getAttributeMappings()
-                        .stream()
-                        .filter(
-                                x ->
-                                        IndexQueryUtils.equalsProperty(x, propertyName)
-                                                && StringUtils.isNotEmpty(x.getIndexField()))
-                        .findFirst();
-        if (attrMap.isPresent()) {
-            return attrMap.get().getIndexField();
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Returns index attribute name linked to unrolled propertyName or null if is absent
-     *
-     * @param propertyName
-     * @return Index attribute name
-     */
     public String getIndexAttributeName(String xpath) {
-        AttributeMapping mapp = this.getAttributeMapping(xpath);
-        if (mapp != null && StringUtils.isNotEmpty(mapp.getIndexField())) {
+        AttributeMapping mapp = IndexQueryUtils.getIndexedAttribute(this, xpath);
+        if (mapp != null) {
             return mapp.getIndexField();
-        } else {
-            return null;
         }
+        return null;
     }
 }

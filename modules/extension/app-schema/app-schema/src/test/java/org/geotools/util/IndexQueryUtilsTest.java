@@ -31,25 +31,6 @@ import org.opengis.filter.FilterFactory2;
 public class IndexQueryUtilsTest {
 
     @Test
-    public void testCheckAllPropertiesIndexedUnrolled() {
-        try (TestFeatureSource fsource =
-                new TestFeatureSource(
-                        "/test-data/index/",
-                        "stationsIndexed.xml",
-                        "http://www.stations.org/1.0",
-                        "stationsIndexed")) {
-            assertTrue(
-                    IndexQueryUtils.checkAllUnrolledPropertiesIndexed(
-                            IndexQueryUtils.getAttributesOnFilter(totallyIndexedFilter()),
-                            fsource.getMappedSource().getMapping()));
-            assertFalse(
-                    IndexQueryUtils.checkAllUnrolledPropertiesIndexed(
-                            IndexQueryUtils.getAttributesOnFilter(partialIndexedFilter()),
-                            fsource.getMappedSource().getMapping()));
-        }
-    }
-
-    @Test
     public void testCheckAllPropertiesIndexedXpath() {
         try (TestFeatureSource fsource =
                 new TestFeatureSource(

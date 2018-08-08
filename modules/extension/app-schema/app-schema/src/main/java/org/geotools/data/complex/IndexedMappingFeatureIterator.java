@@ -16,20 +16,16 @@
  */
 package org.geotools.data.complex;
 
-import static org.geotools.data.complex.ComplexFeatureConstants.DEFAULT_GEOMETRY_LOCAL_NAME;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.commons.lang.StringUtils;
 import org.geotools.data.Query;
 import org.geotools.data.Transaction;
 import org.geotools.data.complex.IndexIdIterator.IndexFeatureIdIterator;
 import org.geotools.data.complex.IndexIdIterator.IndexUniqueVisitorIterator;
 import org.geotools.data.complex.IndexQueryManager.QueryIndexCoverage;
 import org.geotools.data.complex.filter.IndexUnmappingVisitor;
-import org.geotools.data.complex.filter.XPath;
 import org.geotools.data.complex.filter.XPathUtil;
 import org.geotools.data.complex.filter.XPathUtil.StepList;
 import org.geotools.factory.CommonFactoryFinder;
@@ -37,10 +33,10 @@ import org.geotools.factory.GeoTools;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.filter.AttributeExpressionImpl;
+import org.geotools.util.IndexQueryUtils;
 import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.AttributeDescriptor;
 import org.opengis.filter.Filter;
 
 /** @author Fernando Miño (Geosolutions) */
@@ -108,17 +104,22 @@ public abstract class IndexedMappingFeatureIterator implements IMappingFeatureIt
 
     public static PropertyName unrollIndex(PropertyName expression, FeatureTypeMapping mapping) {
         String targetXPath = expression.getPropertyName();
-        // replace the artificial DEFAULT_GEOMETRY property with the actual one
-        if (DEFAULT_GEOMETRY_LOCAL_NAME.equals(targetXPath)) {
-            targetXPath = mapping.getDefaultGeometryXPath();
+        AttributeMapping attMp = getIndexedAttribute(mapping, targetXPath);
+        if (attMp != null) {
+            return new AttributeExpressionImpl(attMp.getIndexField());
         }
-        NamespaceSupport namespaces = mapping.getNamespaces();
-        AttributeDescriptor root = mapping.getTargetFeature();
-        StepList simplifiedSteps = XPath.steps(root, targetXPath, namespaces);
-        AttributeMapping attMapping = mapping.getAttributeMapping(simplifiedSteps);
-        if (attMapping == null || StringUtils.isEmpty(attMapping.getIndexField()))
-            return expression;
-        return new AttributeExpressionImpl(attMapping.getIndexField());
+        return new AttributeExpressionImpl((String) null);
+        // replace the artificial DEFAULT_GEOMETRY property with the actual one
+        //        if (DEFAULT_GEOMETRY_LOCAL_NAME.equals(targetXPath)) {
+        //            targetXPath = mapping.getDefaultGeometryXPath();
+        //        }
+        //        NamespaceSupport namespaces = mapping.getNamespaces();
+        //        AttributeDescriptor root = mapping.getTargetFeature();
+        //        StepList simplifiedSteps = XPath.steps(root, targetXPath, namespaces);
+        //        AttributeMapping attMapping = mapping.getAttributeMapping(simplifiedSteps);
+        //        if (attMapping == null || StringUtils.isEmpty(attMapping.getIndexField()))
+        //            return expression;
+        //        return new AttributeExpressionImpl(attMapping.getIndexField());
     }
 
     protected Filter unrollFilter(Filter filter) {
@@ -223,5 +224,15 @@ public abstract class IndexedMappingFeatureIterator implements IMappingFeatureIt
             numFeatures++;
         }
         return ids;
+    }
+
+    /**
+     * Search for indexed attribute, including on Nested Features
+     *
+     * @return indexed attribute xpath, or null if not found
+     */
+    protected static AttributeMapping getIndexedAttribute(
+            FeatureTypeMapping mapping, String xpath) {
+        return IndexQueryUtils.getIndexedAttribute(mapping, xpath);
     }
 }

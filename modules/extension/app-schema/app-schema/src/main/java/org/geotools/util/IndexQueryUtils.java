@@ -16,14 +16,19 @@
  */
 package org.geotools.util;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.commons.lang.StringUtils;
 import org.geotools.data.DataUtilities;
 import org.geotools.data.Query;
 import org.geotools.data.complex.AttributeMapping;
 import org.geotools.data.complex.FeatureTypeMapping;
+import org.geotools.data.complex.NestedAttributeMapping;
 import org.geotools.data.complex.filter.XPath;
 import org.geotools.data.complex.filter.XPathUtil.StepList;
 import org.geotools.factory.CommonFactoryFinder;
@@ -120,12 +125,13 @@ public final class IndexQueryUtils {
      *
      * @param properties
      * @param mapping
-     * @return
+     * @return //
      */
-    public static boolean checkAllUnrolledPropertiesIndexed(
-            List<String> properties, FeatureTypeMapping mapping) {
-        return !properties.stream().anyMatch(p -> mapping.getIndexAttributeNameUnrolled(p) == null);
-    }
+    //    public static boolean checkAllUnrolledPropertiesIndexed(
+    //            List<String> properties, FeatureTypeMapping mapping) {
+    //        return !properties.stream().anyMatch(p -> mapping.getIndexAttributeNameUnrolled(p) ==
+    // null);
+    //    }
 
     /**
      * Checks if all properties are indexed in mapping
@@ -172,8 +178,11 @@ public final class IndexQueryUtils {
     public static Filter buildIdInExpressionFunction(List<String> ids, FeatureTypeMapping mapping) {
         FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
         List<Expression> idExpressions = new ArrayList<>();
+        String rootXpath =
+                XPath.rootElementSteps(mapping.getTargetFeature(), mapping.getNamespaces())
+                        .toString();
         // add id field name
-        idExpressions.add(ff.property(mapping.getTargetFeature().getName().getLocalPart()));
+        idExpressions.add(ff.property(rootXpath));
         // add values
         ids.forEach(
                 idStr -> {
@@ -193,5 +202,39 @@ public final class IndexQueryUtils {
      */
     public static Filter buildIdInExpression(List<String> ids, FeatureTypeMapping mapping) {
         return buildIdInExpressionFunction(ids, mapping);
+    }
+
+    public static AttributeMapping getIndexedAttribute(FeatureTypeMapping mapping, String xpath) {
+        AttributeMapping atm = mapping.getAttributeMapping(xpath);
+        if (atm != null && StringUtils.isNotEmpty(atm.getIndexField())) {
+            return atm;
+        }
+
+        // XPathUtil
+        // Search on Nested Attributes
+        //        StepList rootStepList =
+        //                XPath.rootElementSteps(mapping.getTargetFeature(),
+        // mapping.getNamespaces());
+        StepList stepList = XPath.steps(mapping.getTargetFeature(), xpath, mapping.getNamespaces());
+        String relXpath = stepList.toString();
+        for (NestedAttributeMapping nm : mapping.getNestedMappings()) {
+            String nestedXpath = nm.getTargetXPath().toString();
+            if (relXpath.startsWith(nestedXpath)) {
+                String subXpath = relXpath.substring(nestedXpath.length() + 1, relXpath.length());
+                FeatureTypeMapping ft = null;
+                // nm.getNestedFeatureType(null);
+                try {
+                    ft = nm.getFeatureTypeMapping(null);
+                } catch (IOException e) {
+                    Logger.getLogger(IndexQueryUtils.class.getName()).log(Level.FINE, null, e);
+                }
+                if (ft != null && StringUtils.isNotBlank(subXpath)) {
+                    AttributeMapping at = getIndexedAttribute(ft, subXpath);
+                    if (at != null && StringUtils.isNotBlank(at.getIndexField())) return at;
+                }
+            }
+        }
+        // nothing found
+        return null;
     }
 }
