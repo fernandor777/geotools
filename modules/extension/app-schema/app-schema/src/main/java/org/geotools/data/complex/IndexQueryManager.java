@@ -90,7 +90,8 @@ public class IndexQueryManager {
      * @return
      */
     protected boolean hasIndex(String propertyName) {
-        return mapping.getIndexAttributeNameUnrolled(propertyName) != null;
+        // return mapping.getIndexAttributeNameUnrolled(propertyName) != null;
+        return mapping.getIndexAttributeName(propertyName) != null;
     }
 
     public static enum QueryIndexCoverage {

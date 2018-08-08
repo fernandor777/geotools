@@ -47,7 +47,7 @@ public class IndexedFilterDetectorVisitor extends DefaultFilterVisitor {
     public Object visit(Or filter, Object data) {
         if (parentLogicOperator != null) return data;
         processFilter(filter);
-        return visit(filter, data);
+        return super.visit(filter, data);
     }
 
     @Override
@@ -84,7 +84,7 @@ public class IndexedFilterDetectorVisitor extends DefaultFilterVisitor {
      * @return
      */
     protected boolean isFullyIndexed(Filter filter) {
-        return IndexQueryUtils.checkAllUnrolledPropertiesIndexed(
+        return IndexQueryUtils.checkAllPropertiesIndexed(
                 IndexQueryUtils.getAttributesOnFilter(filter), mapping);
     }
 
