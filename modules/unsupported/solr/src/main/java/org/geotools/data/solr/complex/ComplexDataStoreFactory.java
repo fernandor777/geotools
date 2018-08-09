@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.digester.Digester;
-import org.apache.commons.lang.StringUtils;
 import org.geotools.data.DataAccess;
 import org.geotools.data.Query;
 import org.geotools.data.Transaction;
@@ -132,6 +131,12 @@ public class ComplexDataStoreFactory implements CustomSourceDataStore {
             indexesConfig.addAttributes(
                     getTypeName(mapping, dataStoreConfig),
                     parseAttributeNames(mapping, dataStoreConfig));
+            if (isDenormalizedIndexMode(mapping, dataStoreConfig)) {
+                // set as denormalizedIndexMode
+                indexesConfig
+                        .getIndexConfig(getTypeName(mapping, dataStoreConfig))
+                        .setDenormalizedIndexMode(true);
+            }
         }
         return new SolrDataStore(
                 ((ComplexDataStoreConfig) dataStoreConfig).getUrl(),
@@ -191,19 +196,22 @@ public class ComplexDataStoreFactory implements CustomSourceDataStore {
         }
     }
 
-    private Set<String> parseIndexModeAttributes(TypeMapping mapping) {
-        Set<String> attributes = new HashSet<>();
-        ((List<AttributeMapping>) mapping.getAttributeMappings())
-                .stream()
-                .filter(
-                        attributeMapping ->
-                                StringUtils.isNotEmpty(attributeMapping.getIndexField()))
-                .forEach(
-                        attributeMapping -> {
-                            attributes.add(attributeMapping.getIndexField());
-                        });
-        return attributes;
-    }
+    //    private Set<String> parseIndexModeAttributes(TypeMapping mapping) {
+    //        Set<String> attributes = new HashSet<>();
+    //        // basic feature attributes:
+    //        ((List<AttributeMapping>) mapping.getAttributeMappings())
+    //                .stream()
+    //                .filter(
+    //                        attributeMapping ->
+    //                                StringUtils.isNotEmpty(attributeMapping.getIndexField()))
+    //                .forEach(
+    //                        attributeMapping -> {
+    //                            attributes.add(attributeMapping.getIndexField());
+    //                        });
+    //        // chained features attributes:
+    //
+    //        return attributes;
+    //    }
 
     private Set<String> parseSourceModeAttributes(TypeMapping mapping) {
         Set<String> attributes = new HashSet<>();
@@ -244,9 +252,9 @@ public class ComplexDataStoreFactory implements CustomSourceDataStore {
 
     private Set<String> parseAttributeNames(TypeMapping mapping, SourceDataStore dataStoreConfig) {
         // if mapping index points to dataStore: is index use case
-        if (dataStoreConfig.getId().equals(mapping.getIndexDataStore())) {
-            return parseIndexModeAttributes(mapping);
-        }
+        //        if (dataStoreConfig.getId().equals(mapping.getIndexDataStore())) {
+        //            return parseIndexModeAttributes(mapping);
+        //        }
         return parseSourceModeAttributes(mapping);
     }
 
@@ -255,5 +263,9 @@ public class ComplexDataStoreFactory implements CustomSourceDataStore {
             return mapping.getIndexTypeName();
         }
         return mapping.getSourceTypeName();
+    }
+
+    private boolean isDenormalizedIndexMode(TypeMapping mapping, SourceDataStore dataStoreConfig) {
+        return dataStoreConfig.getId().equals(mapping.getIndexDataStore());
     }
 }
