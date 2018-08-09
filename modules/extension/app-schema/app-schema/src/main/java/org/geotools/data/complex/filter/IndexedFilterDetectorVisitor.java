@@ -16,6 +16,7 @@
  */
 package org.geotools.data.complex.filter;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.geotools.data.complex.FeatureTypeMapping;
@@ -37,7 +38,7 @@ public class IndexedFilterDetectorVisitor extends DefaultFilterVisitor {
     protected FeatureTypeMapping mapping;
 
     protected BinaryLogicOperator parentLogicOperator;
-    protected List<Filter> indexedFilters;
+    protected List<Filter> indexedFilters = new ArrayList<>();
 
     public IndexedFilterDetectorVisitor(FeatureTypeMapping mapping) {
         this.mapping = mapping;

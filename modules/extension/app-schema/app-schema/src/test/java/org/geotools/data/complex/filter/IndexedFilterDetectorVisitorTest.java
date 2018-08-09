@@ -74,7 +74,9 @@ public class IndexedFilterDetectorVisitorTest extends AppSchemaTestSupport {
     private Filter partialIndexedFilter() {
         FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
         Filter filter =
-                ff.and(totallyIndexedFilter(), ff.like(ff.property("LOCATION_NAME"), "*fer*"));
+                ff.and(
+                        totallyIndexedFilter(),
+                        ff.like(ff.property("st:location/st:name"), "*fer*"));
         return filter;
     }
 
@@ -82,8 +84,8 @@ public class IndexedFilterDetectorVisitorTest extends AppSchemaTestSupport {
         FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
         Filter filter =
                 ff.or(
-                        ff.equals(ff.property("ID"), ff.literal("st.1")),
-                        ff.like(ff.property("NAME"), "*fer*"));
+                        ff.equals(ff.property("st:Station"), ff.literal("st.1")),
+                        ff.like(ff.property("st:Station/st:name"), "*fer*"));
         return filter;
     }
 
@@ -91,8 +93,8 @@ public class IndexedFilterDetectorVisitorTest extends AppSchemaTestSupport {
         FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
         Filter filter =
                 ff.or(
-                        ff.equals(ff.property("NAME"), ff.literal("fer")),
-                        ff.like(ff.property("NAME"), "*mariela*"));
+                        ff.equals(ff.property("st:Station/st:name"), ff.literal("fer")),
+                        ff.like(ff.property("st:Station/st:name"), "*mariela*"));
         return filter;
     }
 
@@ -101,7 +103,7 @@ public class IndexedFilterDetectorVisitorTest extends AppSchemaTestSupport {
         List<Filter> filters =
                 Arrays.asList(
                         totallyIndexedFilter(),
-                        ff.like(ff.property("LOCATION_NAME"), "*fer*"),
+                        ff.like(ff.property("st:location/st:name"), "*fer*"),
                         totallyIndexedFilter2());
         Filter filter = ff.and(filters);
         return filter;
