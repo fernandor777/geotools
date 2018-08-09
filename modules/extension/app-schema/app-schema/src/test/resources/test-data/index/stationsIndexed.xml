@@ -50,14 +50,14 @@
                     <idExpression>
                         <OCQL>ID</OCQL>
                     </idExpression>
-                    <indexField>ID</indexField>
+                    <IndexIdAttribute>ID</IndexIdAttribute>
                 </AttributeMapping>
                 <AttributeMapping>
                     <targetAttribute>st:name</targetAttribute>
                     <sourceExpression>
                         <OCQL>NAME</OCQL>
                     </sourceExpression>
-                    <indexField>NAME</indexField>
+                    <IndexAttribute>NAME</IndexAttribute>
                 </AttributeMapping>
                 <AttributeMapping>
                     <targetAttribute>st:location/st:name</targetAttribute>
