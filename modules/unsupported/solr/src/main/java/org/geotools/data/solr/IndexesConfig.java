@@ -127,6 +127,7 @@ public final class IndexesConfig {
         private final String indexName;
         private final List<GeometryConfig> geometries = new ArrayList<>();
         private final List<String> attributes = new ArrayList<>();
+        private Boolean denormalizedIndexMode = false;
 
         IndexConfig(String indexName) {
             this.indexName = indexName;
@@ -153,13 +154,26 @@ public final class IndexesConfig {
         SimpleFeatureType buildFeatureType(List<SolrAttribute> solrAttributes) {
             SimpleFeatureTypeBuilder featureTypeBuilder = new SimpleFeatureTypeBuilder();
             featureTypeBuilder.setName(indexName);
-            for (String attributeName : attributes) {
-                AttributeDescriptor attribute =
-                        buildAttributeDescriptor(attributeName, solrAttributes);
-                if (attribute == null) {
-                    continue;
+            if (!denormalizedIndexMode) {
+                // normal attributes build
+                for (String attributeName : attributes) {
+                    AttributeDescriptor attribute =
+                            buildAttributeDescriptor(attributeName, solrAttributes);
+                    if (attribute == null) {
+                        continue;
+                    }
+                    featureTypeBuilder.add(attribute);
                 }
-                featureTypeBuilder.add(attribute);
+            } else {
+                // denormalized index build
+                for (SolrAttribute sa : solrAttributes) {
+                    AttributeDescriptor attribute =
+                            buildAttributeDescriptor(sa.getName(), solrAttributes);
+                    if (attribute == null) {
+                        continue;
+                    }
+                    featureTypeBuilder.add(attribute);
+                }
             }
             GeometryConfig defaultGeometry = searchDefaultGeometry();
             if (defaultGeometry != null) {
@@ -217,6 +231,14 @@ public final class IndexesConfig {
                 }
             }
             return null;
+        }
+
+        public Boolean getDenormalizedIndexMode() {
+            return denormalizedIndexMode;
+        }
+
+        public void setDenormalizedIndexMode(Boolean denormalizedIndexMode) {
+            this.denormalizedIndexMode = denormalizedIndexMode;
         }
     }
 
