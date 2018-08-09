@@ -220,6 +220,8 @@ public class XMLConfigDigester {
         // indexType is Type name for index layer
         digester.addCallMethod(typeMapping + "/indexType", "setIndexTypeName", 1);
         digester.addCallParam(typeMapping + "/indexType", 0);
+        digester.addCallMethod(typeMapping + "/IndexTypeName", "setIndexTypeName", 1);
+        digester.addCallParam(typeMapping + "/IndexTypeName", 0);
 
         // create attribute mappings
         final String attMappings = typeMapping + "/attributeMappings";
@@ -288,6 +290,10 @@ public class XMLConfigDigester {
         // Field name in external index layer
         digester.addCallMethod(attMap + "/indexField", "setIndexField", 1);
         digester.addCallParam(attMap + "/indexField", 0);
+        digester.addCallMethod(attMap + "/IndexAttribute", "setIndexField", 1);
+        digester.addCallParam(attMap + "/IndexAttribute", 0);
+        digester.addCallMethod(attMap + "/IndexIdAttribute", "setIndexField", 1);
+        digester.addCallParam(attMap + "/IndexIdAttribute", 0);
 
         // parse JDBC multi value element
         String jdbcMultipleValue = attMap + "/jdbcMultipleValue";
