@@ -46,14 +46,16 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
 
     protected FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
     protected final String attId = "st:Station";
-    protected final String attName = "st:Station/st:name";
-    protected final String attLocationName = "st:Station/st:location/st:name";
+    protected final String attName = "st:Station/st:stationName";
+    protected final String attComments = "st:Station/st:comments";
+    protected final String attObservationDesc =
+            "st:Station/st:observation/st:Observation/st:description";
 
     @Test
     public void testIndex() throws IOException {
-        partialindexCase();
+        // partialindexCase();
         totalindexCase();
-        partialindexPaginationCase();
+        // partialindexPaginationCase();
     }
 
     private void totalindexCase() throws IOException {
@@ -64,11 +66,8 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
         FeatureIterator<Feature> iterator = fcoll.features();
         assertTrue(iterator instanceof TotalIndexedMappingFeatureIterator);
         List<Feature> features = FeatureStreams.toFeatureStream(fcoll).collect(Collectors.toList());
-        assertEquals(features.size(), 4);
-        assertEquals(features.get(0).getIdentifier().getID(), "1");
-        assertEquals(features.get(1).getIdentifier().getID(), "2");
-        assertEquals(features.get(2).getIdentifier().getID(), "10");
-        assertEquals(features.get(3).getIdentifier().getID(), "11");
+        assertEquals(features.size(), 1);
+        assertEquals(features.get(0).getIdentifier().getID(), "13");
     }
 
     private void partialindexCase() throws IOException {
@@ -107,23 +106,30 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
 
     @Override
     protected void configFieldsSetup() {
-        this.mappedTypeName = Types.typeName("stationsIndexed");
-        this.xmlFileName = "stationsIndexed.xml";
-        this.xsdFileName = "stationsDefaultGeometry.xsd";
-        this.testData = "/test-data/appschema-indexes/stations_simple/";
+        this.mappedTypeName = Types.typeName("StationType-f46d72da-5591-4873-b210-5ed30a6ffb0d");
+        this.xmlFileName = "mappings_solr.xml";
+        this.xsdFileName = "meteo.xsd";
+        this.testData = "/test-data/appschema-indexes/stations_complex/";
     }
+    
 
+    
     /** Should returns 1, 2, 5, 6, 10, 12(11 on index) */
     private Filter partialIndexedFilter() {
         List<Filter> filters =
                 Arrays.asList(
-                        ff.or(
-                                ff.equals(ff.property(this.attName), ff.literal("station11")),
-                                ff.equals(ff.property(this.attId), ff.literal("1"))),
-                        ff.like(ff.property(attLocationName), "*America*"),
-                        ff.or(
-                                ff.equals(ff.property(this.attName), ff.literal("station10")),
-                                ff.equals(ff.property(this.attId), ff.literal("2"))));
+                        ff.like(ff.property(attObservationDesc), "*sky*") // ,
+                        //                        ff.or(
+                        //                                ff.equals(ff.property(this.attName),
+                        // ff.literal("station11")),
+                        //                                ff.equals(ff.property(this.attId),
+                        // ff.literal("1"))),
+                        //                        ff.or(
+                        //                                ff.equals(ff.property(this.attName),
+                        // ff.literal("station10")),
+                        //                                ff.equals(ff.property(this.attId),
+                        // ff.literal("2")))
+                        );
         Filter filter = ff.or(filters);
         return filter;
     }
@@ -133,13 +139,19 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
         FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
         List<Filter> filters =
                 Arrays.asList(
-                        ff.or(
-                                ff.equals(ff.property(this.attName), ff.literal("station11")),
-                                ff.equals(ff.property(this.attId), ff.literal("1"))),
-                        ff.or(
-                                ff.equals(ff.property(this.attName), ff.literal("station10")),
-                                ff.equals(ff.property(this.attId), ff.literal("2"))));
-        Filter filter = ff.or(filters);
+                        ff.like(ff.property(attObservationDesc), "*sky*")
+                        //                        ff.or(
+                        //                                ff.equals(ff.property(this.attName),
+                        // ff.literal("station11")),
+                        //                                ff.equals(ff.property(this.attId),
+                        // ff.literal("1"))),
+                        //                        ff.or(
+                        //                                ff.equals(ff.property(this.attName),
+                        // ff.literal("station10")),
+                        //                                ff.equals(ff.property(this.attId),
+                        // ff.literal("2")))
+                        );
+        Filter filter = ff.like(ff.property(attObservationDesc), "*sky*"); //ff.or(filters);
         return filter;
     }
 
@@ -147,6 +159,7 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
     protected void prepareFiles() throws Exception {
         copyTestData(this.xsdFileName, tempDir);
         copyTestData(this.xmlFileName, tempDir);
+        copyTestData("includedTypes.xml", tempDir);
     }
 
     @Override
