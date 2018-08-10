@@ -42,7 +42,10 @@ import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.expression.PropertyName;
 import org.opengis.filter.sort.SortBy;
 
-/** @author Fernando Miño (Geosolutions) */
+/**
+ * Base class for Indexed Iterators
+ * @author Fernando Miño (Geosolutions
+ */
 public abstract class IndexedMappingFeatureIterator implements IMappingFeatureIterator {
 
     private static int MAX_FEATURES_ROUND = 100;
