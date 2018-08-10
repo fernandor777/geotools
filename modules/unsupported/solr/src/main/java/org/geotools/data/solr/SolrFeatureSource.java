@@ -420,16 +420,16 @@ public class SolrFeatureSource extends ContentFeatureSource {
 
     @Override
     protected boolean handleVisitor(Query query, FeatureVisitor visitor) throws IOException {
-        // Don't do the following shortcuts if we don't request all features as that
-        // might introduce subtle bugs.
-        if (query.getMaxFeatures() != Integer.MAX_VALUE) {
-            return false;
-        }
-
         // UniqueVisitor handling:
         if (visitor instanceof UniqueVisitor) {
             handleUniqueVisitor(query, (UniqueVisitor) visitor);
             return true;
+        }
+
+        // Don't do the following shortcuts if we don't request all features as that
+        // might introduce subtle bugs.
+        if (query.getMaxFeatures() != Integer.MAX_VALUE) {
+            return false;
         }
 
         SortBy sortBy;
