@@ -39,7 +39,10 @@ import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.filter.Filter;
 
-/** @author Fernando Miño (Geosolutions) */
+/**
+ * Base class for Indexed Iterators
+ * @author Fernando Miño (Geosolutions
+ */
 public abstract class IndexedMappingFeatureIterator implements IMappingFeatureIterator {
 
     private static int MAX_FEATURES_ROUND = 100;

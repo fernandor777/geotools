@@ -100,6 +100,10 @@ public class IndexQueryManager {
         PARTIAL
     }
 
+    /**
+     * Partial Indexed Query management/transform/utils
+     * @author Fernando Miño, Geosolutions
+     */
     public static class PartialIndexQueryManager extends IndexQueryManager {
 
         // indexed detected:
