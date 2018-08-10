@@ -111,9 +111,7 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
         this.xsdFileName = "meteo.xsd";
         this.testData = "/test-data/appschema-indexes/stations_complex/";
     }
-    
 
-    
     /** Should returns 1, 2, 5, 6, 10, 12(11 on index) */
     private Filter partialIndexedFilter() {
         List<Filter> filters =
@@ -151,7 +149,7 @@ public class AppSchemaIndexIntegrationTest extends AppSchemaOnlineTestSupport {
                         //                                ff.equals(ff.property(this.attId),
                         // ff.literal("2")))
                         );
-        Filter filter = ff.like(ff.property(attObservationDesc), "*sky*"); //ff.or(filters);
+        Filter filter = ff.like(ff.property(attObservationDesc), "*sky*"); // ff.or(filters);
         return filter;
     }
 

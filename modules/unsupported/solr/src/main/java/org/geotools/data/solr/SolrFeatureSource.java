@@ -18,7 +18,6 @@
 package org.geotools.data.solr;
 
 import java.io.IOException;
-<<<<<<< 0784bb0fe0630fe1642c64bcf99415c10b959eed
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.ArrayList;
@@ -426,16 +425,16 @@ public class SolrFeatureSource extends ContentFeatureSource {
 
     @Override
     protected boolean handleVisitor(Query query, FeatureVisitor visitor) throws IOException {
-        // Don't do the following shortcuts if we don't request all features as that
-        // might introduce subtle bugs.
-        if (query.getMaxFeatures() != Integer.MAX_VALUE) {
-            return false;
-        }
-
         // UniqueVisitor handling:
         if (visitor instanceof UniqueVisitor) {
             handleUniqueVisitor(query, (UniqueVisitor) visitor);
             return true;
+        }
+
+        // Don't do the following shortcuts if we don't request all features as that
+        // might introduce subtle bugs.
+        if (query.getMaxFeatures() != Integer.MAX_VALUE) {
+            return false;
         }
 
         SortBy sortBy;
