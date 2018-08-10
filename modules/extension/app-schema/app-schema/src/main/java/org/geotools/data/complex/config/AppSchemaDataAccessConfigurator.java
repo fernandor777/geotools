@@ -41,7 +41,7 @@ import java.util.logging.Logger;
 import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.geotools.data.DataAccess;
 import org.geotools.data.DataAccessFinder;
 import org.geotools.data.DataSourceException;
@@ -877,8 +877,6 @@ public class AppSchemaDataAccessConfigurator {
         @SuppressWarnings("unchecked")
         final List<SourceDataStore> dsParams = config.getSourceDataStores();
         String id;
-
-        List<CustomSourceDataStore> extensions = CustomSourceDataStore.loadExtensions();
 
         for (SourceDataStore dsconfig : dsParams) {
             id = dsconfig.getId();

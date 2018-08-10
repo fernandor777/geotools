@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.geotools.data.DataUtilities;
 import org.geotools.data.Query;
 import org.geotools.data.complex.AttributeMapping;

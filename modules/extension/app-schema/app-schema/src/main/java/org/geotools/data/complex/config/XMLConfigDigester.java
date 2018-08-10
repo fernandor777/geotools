@@ -384,31 +384,6 @@ public class XMLConfigDigester {
         digester.addSetNext(dataStores + dataStoreTag, "add");
     }
 
-    public static void setCommonSourceDataStoreRules(Class<? extends SourceDataStore> datStoreType,
-                                                     String dataStoreTag, Digester digester) {
-        String dataStores = "AppSchemaDataAccess/sourceDataStores/";
-        // create a SourceDataStore for each DataStore tag
-        digester.addObjectCreate(
-                dataStores + dataStoreTag, XMLConfigDigester.CONFIG_NS_URI, datStoreType);
-        digester.addCallMethod(dataStores + dataStoreTag + "/id", "setId", 1);
-        digester.addCallParam(dataStores + dataStoreTag + "/id", 0);
-        // handle the parameters
-        digester.addObjectCreate(
-                dataStores + dataStoreTag + "/parameters",
-                XMLConfigDigester.CONFIG_NS_URI,
-                HashMap.class);
-        digester.addCallMethod(dataStores + dataStoreTag + "/parameters/Parameter", "put", 2);
-        digester.addCallParam(dataStores + dataStoreTag + "/parameters/Parameter/name", 0);
-        digester.addCallParam(dataStores + dataStoreTag + "/parameters/Parameter/value", 1);
-        digester.addSetNext(dataStores + dataStoreTag + "/parameters", "setParams");
-        // isDataAccess is a flag to denote that we want to connect to the data access that is
-        // connected to the data store specified
-        digester.addCallMethod(dataStores + dataStoreTag + "/isDataAccess", "setDataAccess", 1);
-        digester.addCallParam(dataStores + dataStoreTag + "/isDataAccess", 0);
-        // add the SourceDataStore to the list
-        digester.addSetNext(dataStores + dataStoreTag, "add");
-    }
-
     private void setNamespacesRules(Digester digester) {
         final String ns = "AppSchemaDataAccess/namespaces";
         digester.addObjectCreate(ns, XMLConfigDigester.CONFIG_NS_URI, HashMap.class);

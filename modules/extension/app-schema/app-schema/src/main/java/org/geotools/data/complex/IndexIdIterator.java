@@ -98,6 +98,7 @@ public interface IndexIdIterator extends Iterator<String>, Closeable {
         private Iterator visitorIterator;
         private int currentVisitorStart;
         private String nextValue = null;
+        private int counter = 0;
 
         public IndexUniqueVisitorIterator(
                 FeatureCollection<SimpleFeatureType, SimpleFeature> fc,
@@ -126,7 +127,10 @@ public interface IndexIdIterator extends Iterator<String>, Closeable {
         }
 
         private String getNextFromVisitor() {
+            // if max features reached, no more items.
+            if (counter >= idQuery.getMaxFeatures()) return null;
             if (visitorIterator.hasNext()) {
+                counter++;
                 return (String) visitorIterator.next();
             } else {
                 // if next current visitor start is into bounds
@@ -138,6 +142,7 @@ public interface IndexIdIterator extends Iterator<String>, Closeable {
                     // if don't have next value yet, no more data -> return null
                     if (!visitorIterator.hasNext()) return null;
                     // has next value, return it
+                    counter++;
                     return (String) visitorIterator.next();
                 }
             }

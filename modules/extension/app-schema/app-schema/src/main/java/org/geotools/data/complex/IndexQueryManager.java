@@ -102,6 +102,7 @@ public class IndexQueryManager {
 
     /**
      * Partial Indexed Query management/transform/utils
+     *
      * @author Fernando Miño, Geosolutions
      */
     public static class PartialIndexQueryManager extends IndexQueryManager {

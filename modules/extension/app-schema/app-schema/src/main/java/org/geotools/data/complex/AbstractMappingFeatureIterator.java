@@ -265,8 +265,6 @@ public abstract class AbstractMappingFeatureIterator implements IMappingFeatureI
         this.query = unrolledQuery;
     }
 
-    protected Query query;
-
     // properties can only be set by constructor, before initialising source features
     // (for joining nested mappings)
     private void setPropertyNames(Collection<PropertyName> propertyNames) {

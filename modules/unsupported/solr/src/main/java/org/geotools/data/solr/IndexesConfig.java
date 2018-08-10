@@ -104,7 +104,7 @@ public final class IndexesConfig {
      * Returns the configuration associated with the provided apache Solr index name. If not
      * configuration is available a new one will be created and associated with the index.
      */
-    private IndexConfig getIndexConfig(String indexName) {
+    public IndexConfig getIndexConfig(String indexName) {
         IndexConfig indexConfig = indexesConfig.get(indexName);
         if (indexConfig == null) {
             // no configuration available, create a new one
@@ -120,7 +120,7 @@ public final class IndexesConfig {
     }
 
     /** This class holds the configuration of an Apache Solr index. */
-    private static final class IndexConfig {
+    public static final class IndexConfig {
 
         private static final Logger LOGGER = Logging.getLogger(IndexConfig.class);
 

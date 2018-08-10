@@ -62,6 +62,8 @@ public class TotalIndexedMappingFeatureIterator extends IndexedMappingFeatureIte
         Query nextQuery = new Query(query);
         Filter idInFilter = IndexQueryUtils.buildIdInExpression(getNextSourceIdList(), mapping);
         nextQuery.setFilter(idInFilter);
+        nextQuery.setStartIndex(0);
+        nextQuery.setMaxFeatures(Integer.MAX_VALUE);
         return nextQuery;
     }
 

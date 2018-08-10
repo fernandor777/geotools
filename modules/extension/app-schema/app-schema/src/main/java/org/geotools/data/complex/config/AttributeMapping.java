@@ -126,8 +126,6 @@ public class AttributeMapping implements Serializable {
      */
     private Map clientProperties;
 
-    private MultipleValue multipleValue;
-
     /** Field name in external index layer */
     private String indexField;
 
