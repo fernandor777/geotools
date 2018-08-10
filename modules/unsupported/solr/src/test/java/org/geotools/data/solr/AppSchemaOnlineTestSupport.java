@@ -66,7 +66,8 @@ public abstract class AppSchemaOnlineTestSupport extends OnlineTestCase {
     protected String xsdFileName = "meteo.xsd";
     protected String xmlFileName = "mappings_solr.xml";
     protected String ST_NAMESPACE = "http://www.stations.org/1.0";
-    protected Name mappedTypeName = Types.typeName("multi_stations_solr");
+    protected Name mappedTypeName =
+            Types.typeName("StationType-f46d72da-5591-4873-b210-5ed30a6ffb0d");
     //
     @Rule public TemporaryFolder tempfolder = new TemporaryFolder();
     protected File tempDir;
