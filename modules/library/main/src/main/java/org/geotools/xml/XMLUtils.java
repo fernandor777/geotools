@@ -16,7 +16,15 @@
  */
 package org.geotools.xml;
 
+import java.io.StringWriter;
 import javax.xml.namespace.QName;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import org.w3c.dom.Document;
 import org.xml.sax.helpers.NamespaceSupport;
 
 /**
@@ -96,5 +104,21 @@ public class XMLUtils {
                 || ((c >= 0x20) && (c <= 0xD7FF))
                 || ((c >= 0xE000) && (c <= 0xFFFD))
                 || ((c >= 0x10000) && (c <= 0x10FFFF));
+    }
+
+    /**
+     * Returns xml String from a Document Object
+     *
+     * @param document Xml Document to parse
+     * @return Xml String representation
+     * @throws TransformerException
+     */
+    public static String documentToString(Document document) throws TransformerException {
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer transformer = tf.newTransformer();
+        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(document), new StreamResult(writer));
+        return writer.getBuffer().toString();
     }
 }
