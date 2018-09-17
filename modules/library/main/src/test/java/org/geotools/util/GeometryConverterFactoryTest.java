@@ -17,7 +17,10 @@
 package org.geotools.util;
 
 import junit.framework.TestCase;
+import org.junit.Test;
 import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.CoordinateXYM;
+import org.locationtech.jts.geom.CoordinateXYZM;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -115,5 +118,58 @@ public class GeometryConverterFactoryTest extends TestCase {
                                 String.class);
 
         assertEquals("POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))", wkt);
+    }
+
+    /** Tests measure (M) coordinate value on Point */
+    @Test
+    public void testPointMToString() throws Exception {
+        GeometryFactory gf = new GeometryFactory();
+        String wkt =
+                factory.createConverter(Geometry.class, String.class, null)
+                        .convert(gf.createPoint(new CoordinateXYM(1, 1, 4)), String.class);
+        assertEquals("POINT (1 1 0 4)", wkt);
+    }
+
+    /** Tests measure (M) coordinate value on Point */
+    @Test
+    public void testPointZMToString() throws Exception {
+        GeometryFactory gf = new GeometryFactory();
+        String wkt =
+                factory.createConverter(Geometry.class, String.class, null)
+                        .convert(gf.createPoint(new CoordinateXYZM(1, 1, 1, 4)), String.class);
+        assertEquals("POINT (1 1 1 4)", wkt);
+    }
+
+    /** Tests measure (M) coordinate value on LineString */
+    @Test
+    public void testLineMToString() throws Exception {
+        GeometryFactory gf = new GeometryFactory();
+        String wkt =
+                factory.createConverter(Geometry.class, String.class, null)
+                        .convert(
+                                gf.createLineString(
+                                        new CoordinateXYM[] {
+                                            new CoordinateXYM(1, 1, 4), new CoordinateXYM(2, 2, 4)
+                                        }),
+                                String.class);
+        assertEquals("LINESTRING (1 1 0 4, 2 2 0 4)", wkt);
+    }
+
+    /** Tests measure (M) coordinate value on Polygon */
+    @Test
+    public void testPolygonMToString() throws Exception {
+        GeometryFactory gf = new GeometryFactory();
+        String wkt =
+                factory.createConverter(Geometry.class, String.class, null)
+                        .convert(
+                                gf.createPolygon(
+                                        new CoordinateXYM[] {
+                                            new CoordinateXYM(1, 1, 4),
+                                            new CoordinateXYM(1, 2, 4),
+                                            new CoordinateXYM(2, 1, 4),
+                                            new CoordinateXYM(1, 1, 4)
+                                        }),
+                                String.class);
+        assertEquals("POLYGON ((1 1 0 4, 1 2 0 4, 2 1 0 4, 1 1 0 4))", wkt);
     }
 }

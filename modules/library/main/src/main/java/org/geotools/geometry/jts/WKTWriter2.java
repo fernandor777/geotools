@@ -157,8 +157,8 @@ public class WKTWriter2 extends WKTWriter {
     public WKTWriter2(int outputDimension) {
         this.outputDimension = outputDimension;
 
-        if (outputDimension < 2 || outputDimension > 3)
-            throw new IllegalArgumentException("Invalid output dimension (must be 2 or 3)");
+        if (outputDimension < 2 || outputDimension > 4)
+            throw new IllegalArgumentException("Invalid output dimension (must be 2 or 3 or 4)");
     }
 
     /**
@@ -483,9 +483,20 @@ public class WKTWriter2 extends WKTWriter {
      */
     private void appendCoordinate(Coordinate coordinate, Writer writer) throws IOException {
         writer.write(writeNumber(coordinate.x) + " " + writeNumber(coordinate.y));
-        if (outputDimension >= 3 && !Double.isNaN(coordinate.z)) {
+        if (outputDimension >= 3 && !Double.isNaN(coordinate.getZ())) {
             writer.write(" ");
-            writer.write(writeNumber(coordinate.z));
+            writer.write(writeNumber(coordinate.getZ()));
+        }
+        // if has dimension 4 and M value
+        if (outputDimension >= 4 && !Double.isNaN(coordinate.getM())) {
+            // if no Z value, fill with 0
+            if (Double.isNaN(coordinate.getZ())) {
+                writer.write(" ");
+                writer.write(writeNumber(0));
+            }
+            // write M value
+            writer.write(" ");
+            writer.write(writeNumber(coordinate.getM()));
         }
     }
 

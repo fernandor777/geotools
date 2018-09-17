@@ -18,10 +18,12 @@ package org.geotools.util;
 
 import org.geotools.factory.Hints;
 import org.geotools.geometry.jts.WKTReader2;
+import org.geotools.geometry.jts.WKTWriter2;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.impl.CoordinateArraySequence;
 
 /**
  * Converter factory performing converstions among geometric types.
@@ -92,7 +94,15 @@ public class GeometryConverterFactory implements ConverterFactory {
                 return new Converter() {
                     public Object convert(Object source, Class target) throws Exception {
                         Geometry geometry = (Geometry) source;
-                        return geometry.toText();
+                        CoordinateArraySequence cseq =
+                                new CoordinateArraySequence(geometry.getCoordinates());
+                        // if hasn't M value, backward compatible behavior:
+                        if (!cseq.hasM()) {
+                            return geometry.toString();
+                        }
+                        // has M coordinates, use 4 dimensions by default
+                        WKTWriter2 writer = new WKTWriter2(4);
+                        return writer.write(geometry);
                     }
                 };
             }
