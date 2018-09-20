@@ -86,7 +86,7 @@ public class FeatureChainedAttributeVisitor extends DefaultExpressionVisitor {
         attributes = new ArrayList<>();
 
         try {
-            walkXPath(expression.getPropertyName(), feature);
+            walkExpression(expression, feature);
         } catch (IOException e) {
             throw new RuntimeException(
                     "Exception occurred splitting XPath expression into mapping steps", e);
@@ -95,10 +95,13 @@ public class FeatureChainedAttributeVisitor extends DefaultExpressionVisitor {
         return getFeatureChainedAttributes();
     }
 
-    void walkXPath(String xpath, Feature feature) throws IOException {
+    void walkExpression(PropertyName expression, Feature feature) throws IOException {
         FeatureTypeMapping currentType = rootMapping;
         StepList currentXPath =
-                XPath.steps(rootMapping.getTargetFeature(), xpath, rootMapping.getNamespaces());
+                XPath.steps(
+                        rootMapping.getTargetFeature(),
+                        expression.getPropertyName(),
+                        expression.getNamespaceContext());
         FeatureChainedAttributeDescriptor attrDescr = new FeatureChainedAttributeDescriptor();
         walkXPathRecursive(currentXPath, currentType, attrDescr, feature);
     }

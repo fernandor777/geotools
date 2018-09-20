@@ -837,7 +837,17 @@ public class UnmappingFilterVisitor implements org.opengis.filter.FilterVisitor,
             targetXPath = mappings.getDefaultGeometryXPath();
         }
 
-        NamespaceSupport namespaces = mappings.getNamespaces();
+        NamespaceSupport namespaces = expr.getNamespaceContext();
+        // add prefixes from mappings
+        //        Collections.list(mappings.getNamespaces().getPrefixes())
+        //                .stream()
+        //                .forEach(
+        //                        x -> {
+        //                            namespaces.declarePrefix(
+        //                                    (String) x, mappings.getNamespaces().getURI((String)
+        // x));
+        //                        });
+
         AttributeDescriptor root = mappings.getTargetFeature();
 
         List<NestedAttributeMapping> nestedMappings = mappings.getNestedMappings();
