@@ -312,14 +312,6 @@ public class ComplexFilterSplitter extends PostPreProcessFilterSplittingVisitor 
 
             List<FeatureChainedAttributeDescriptor> fcAttrs =
                     nestedAttrExtractor.getFeatureChainedAttributes();
-            if (fcAttrs.size() == 0
-                    && !nestedAttrExtractor.conditionalMappingWasFound()
-                    && !FeatureChainedAttributeVisitor.isXlinkHref(exprSteps)) {
-                throw new IllegalArgumentException(
-                        String.format(
-                                "Attribute \"%s\" not found in type \"%s\"",
-                                expression, mappings.getTargetFeature().getName().toString()));
-            }
             // encoding of filters on multiple nested attributes is not (yet) supported
             if (fcAttrs.size() == 1) {
                 FeatureChainedAttributeDescriptor nestedAttrDescr = fcAttrs.get(0);
