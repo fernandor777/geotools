@@ -75,7 +75,7 @@ public class ReprojectingFilterVisitor extends DuplicatingFilterVisitor {
      * @param propertyName
      * @return
      */
-    private CoordinateReferenceSystem findPropertyCRS(PropertyName propertyName) {
+    protected CoordinateReferenceSystem findPropertyCRS(PropertyName propertyName) {
         Object o = propertyName.evaluate(featureType);
         if (o instanceof GeometryDescriptor) {
             GeometryDescriptor gat = (GeometryDescriptor) o;
