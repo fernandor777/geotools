@@ -92,6 +92,7 @@ public abstract class IndexedMappingFeatureIterator implements IMappingFeatureIt
     protected Query unrollIndexes(Query query) {
         Query newQuery = new Query(query);
         newQuery.setFilter(unrollFilter(query.getFilter()));
+        newQuery.setSortBy(unrollSortBy(query.getSortBy()));
         return newQuery;
     }
 
