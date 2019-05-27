@@ -28,6 +28,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Consumer;
+
 import javax.xml.namespace.QName;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
@@ -78,6 +80,8 @@ public class Parser {
 
     /** the instance document being parsed */
     private InputStream input;
+    
+    private Consumer<SAXParser> parserConfigurationConsumer;
 
     /**
      * Creates a new instance of the parser.
@@ -543,7 +547,18 @@ public class Parser {
                 schemaLocation.toString());
         // add the handler as a LexicalHandler too.
         parser.setProperty(SAX_PROPERTY_PREFIX + LEXICAL_HANDLER_PROPERTY, handler);
+        // execute configuration consumer (if was set)
+        if (parserConfigurationConsumer != null)
+            parserConfigurationConsumer.accept(parser);
+        // return builded parser
         return parser;
+    }
+
+    /**
+     * Sets a configuration stage functional Consumer for SAXParser object.
+     */
+    public void setParserConfigurationConsumer(Consumer<SAXParser> parserConfigurationConsumer) {
+        this.parserConfigurationConsumer = parserConfigurationConsumer;
     }
 
     /**
