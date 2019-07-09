@@ -64,6 +64,7 @@ import org.geotools.data.complex.util.XPathUtil.Step;
 import org.geotools.data.complex.util.XPathUtil.StepList;
 import org.geotools.data.complex.xml.XmlFeatureSource;
 import org.geotools.data.joining.JoiningNestedAttributeMapping;
+import org.geotools.feature.MetadataSupplier;
 import org.geotools.feature.NameImpl;
 import org.geotools.feature.type.AttributeDescriptorImpl;
 import org.geotools.feature.type.FeatureTypeFactoryImpl;
@@ -716,7 +717,16 @@ public class AppSchemaDataAccessConfigurator {
         for (Iterator it = dto.getClientProperties().entrySet().iterator(); it.hasNext(); ) {
             Map.Entry entry = (Map.Entry) it.next();
             String name = (String) entry.getKey();
+            // checks if has "/" element mark
+            final boolean hasElementMark = name.startsWith("/");
+            if (hasElementMark) {
+                name = name.replace("/", "");
+            }
             Name qName = Types.degloseName(name, namespaces);
+            if (hasElementMark) {
+                qName = new ComplexNameImpl(qName.getNamespaceURI(), qName.getLocalPart(), true);
+                ((ComplexNameImpl) qName).getMetadataMap().put("unbounded", Boolean.TRUE);
+            }
             String cqlExpression = (String) entry.getValue();
             final Expression expression = parseOgcCqlExpression(cqlExpression);
             clientProperties.put(qName, expression);
@@ -1103,5 +1113,51 @@ public class AppSchemaDataAccessConfigurator {
             ((XmlFeatureSource) fSource).setNamespaces(namespaces);
         }
         return fSource;
+    }
+
+    /**
+     * Name implementation capable of store more information about the attribute/element
+     * represented.
+     */
+    public static class ComplexNameImpl extends NameImpl implements MetadataSupplier {
+
+        private boolean isNestedElement;
+        private Map<Object, Object> metadataMap;
+
+        public ComplexNameImpl(String namespace, String local, boolean isNestedElement) {
+            super(namespace, local);
+            this.isNestedElement = isNestedElement;
+            metadataMap = new HashMap<Object, Object>();
+        }
+
+        @Override
+        public String getLocalPart() {
+            return super.getLocalPart();
+        }
+
+        @Override
+        public String toString() {
+            return super.toString();
+        }
+
+        @Override
+        public String getNamespaceURI() {
+            return super.getNamespaceURI();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return super.equals(obj);
+        }
+
+        /** Returns true if represented Name is a nested element instead an attribute. */
+        public boolean isNestedElement() {
+            return isNestedElement;
+        }
+
+        @Override
+        public Map<Object, Object> getMetadataMap() {
+            return metadataMap;
+        }
     }
 }

@@ -27,6 +27,7 @@ import java.util.logging.Logger;
 import javax.xml.namespace.QName;
 import org.geotools.appschema.feature.AppSchemaAttributeBuilder;
 import org.geotools.data.complex.AbstractMappingFeatureIterator;
+import org.geotools.data.complex.config.AppSchemaDataAccessConfigurator.ComplexNameImpl;
 import org.geotools.data.complex.config.NonFeatureTypeProxy;
 import org.geotools.data.complex.feature.type.ComplexFeatureTypeFactoryImpl;
 import org.geotools.data.complex.feature.type.Types;
@@ -60,6 +61,7 @@ import org.opengis.feature.type.PropertyDescriptor;
 import org.opengis.feature.type.PropertyType;
 import org.opengis.filter.FilterFactory;
 import org.opengis.filter.expression.Expression;
+import org.opengis.filter.expression.Literal;
 import org.opengis.filter.expression.PropertyName;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.xml.sax.Attributes;
@@ -467,7 +469,9 @@ public class XPath extends XPathUtil {
                 if (currStepValue instanceof Collection) {
                     List<Attribute> values = new ArrayList((Collection) currStepValue);
                     if (!values.isEmpty()) {
-                        if (isEmpty(convertedValue)) {
+                        if ((!(descriptor.getName() instanceof ComplexNameImpl)
+                                        || !descriptor.isNillable())
+                                && isEmpty(convertedValue)) {
                             // when attribute is empty, it is probably just a parent of a leaf
                             // attribute
                             // it could already exist from another attribute mapping for a different
@@ -763,6 +767,10 @@ public class XPath extends XPathUtil {
             // if it's a single value in a collection, strip the square brackets
             String collectionString = value.toString();
             return collectionString.substring(1, collectionString.length() - 1);
+        }
+        if (value instanceof Literal) {
+            final Literal literal = (Literal) value;
+            return literal.evaluate(literal.getValue(), binding);
         }
         return FF.literal(value).evaluate(value, binding);
     }
