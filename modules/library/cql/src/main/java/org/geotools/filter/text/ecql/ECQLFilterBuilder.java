@@ -16,11 +16,14 @@
  */
 package org.geotools.filter.text.ecql;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+
+import org.geotools.filter.function.InFunction;
 import org.geotools.filter.text.commons.AbstractFilterBuilder;
 import org.geotools.filter.text.commons.BuildResultStack;
 import org.geotools.filter.text.commons.IToken;
@@ -151,7 +154,7 @@ final class ECQLFilterBuilder extends AbstractFilterBuilder {
      * (propName = expr1) or (propName = expr2)
      * </pre>
      */
-    public Or buildInPredicate(final int nodeExpression) throws CQLException {
+    public Filter buildInPredicate(final int nodeExpression) throws CQLException {
         // retrieves the expressions from stack
         List<Expression> exprList = new LinkedList<Expression>();
         while (!getResultStack().empty()) {
@@ -173,17 +176,24 @@ final class ECQLFilterBuilder extends AbstractFilterBuilder {
         // retrieve the left hand expression from the stack
         final Expression leftHandExpr = getResultStack().popExpression();
 
+        InFunction inFunction = new InFunction();
+        List<Expression> inParams = new ArrayList<>(exprList.size() + 1);
+        inParams.add(leftHandExpr);
+        inParams.addAll(exprList);
+        inFunction.setParameters(inParams);
+        return getFilterFactory().equals(inFunction, getFilterFactory().literal(true));
+        
         // makes one comparison for each expression in the expression list,
         // associated by the Or filter.
-        List<Filter> filterList = new LinkedList<Filter>();
-        for (Expression expression : exprList) {
-            PropertyIsEqualTo eq = getFilterFactory().equals(leftHandExpr, expression);
-            filterList.add(eq);
-        }
-        Collections.reverse(filterList);
-        Or orFilter = getFilterFactory().or(filterList);
-
-        return orFilter;
+//        List<Filter> filterList = new LinkedList<Filter>();
+//        for (Expression expression : exprList) {
+//            PropertyIsEqualTo eq = getFilterFactory().equals(leftHandExpr, expression);
+//            filterList.add(eq);
+//        }
+//        Collections.reverse(filterList);
+//        Or orFilter = getFilterFactory().or(filterList);
+//
+//        return orFilter;
     }
 
     public Coordinate buildCoordinate() throws CQLException {

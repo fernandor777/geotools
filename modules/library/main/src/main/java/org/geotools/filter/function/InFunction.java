@@ -18,6 +18,8 @@
 package org.geotools.filter.function;
 
 import java.util.List;
+import java.util.Objects;
+
 import org.geotools.filter.FilterCapabilities;
 import org.geotools.filter.FunctionExpressionImpl;
 import org.opengis.filter.capability.FunctionName;
@@ -94,10 +96,12 @@ public class InFunction extends FunctionExpressionImpl {
         Object candidate = getExpression(0).evaluate(feature);
 
         boolean result = false;
-        List<Expression> valuesToTest =
-                (List<Expression>) getParameters().subList(1, getParameters().size());
-        for (Expression expression : valuesToTest) {
-            Object value = expression.evaluate(feature);
+//        List<Expression> valuesToTest =
+//                (List<Expression>) getParameters().subList(1, getParameters().size());
+        List<Expression> parameters = getParameters();
+        for (int i = 1; i < parameters.size(); i++ ) {
+        	Expression expression = parameters.get(i);
+        	Object value = expression.evaluate(feature);
             if (candidate == null) {
                 result = StaticGeometry.isNull(value);
             } else {
@@ -108,6 +112,18 @@ public class InFunction extends FunctionExpressionImpl {
                 break;
             }
         }
+//        for (Expression expression : valuesToTest) {
+//            Object value = expression.evaluate(feature);
+//            if (candidate == null) {
+//                result = StaticGeometry.isNull(value);
+//            } else {
+//                result = result || StaticGeometry.equalTo(candidate, value);
+//            }
+//
+//            if (result) {
+//                break;
+//            }
+//        }
 
         return result;
     }

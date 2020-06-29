@@ -454,8 +454,8 @@ public class ECQLCompiler extends ECQLParser implements org.geotools.filter.text
                 return this.builder.buildInPredicate(JJTEXPRESSION_IN_LIST_NODE);
 
             case JJTNOT_IN_PREDICATE_NODE:
-                Or orFilter = this.builder.buildInPredicate(JJTEXPRESSION_IN_LIST_NODE);
-                Not notOrFilter = this.builder.buildNotFilter(orFilter);
+                Filter inFilter = this.builder.buildInPredicate(JJTEXPRESSION_IN_LIST_NODE);
+                Not notOrFilter = this.builder.buildNotFilter(inFilter);
 
                 return notOrFilter;
         }
