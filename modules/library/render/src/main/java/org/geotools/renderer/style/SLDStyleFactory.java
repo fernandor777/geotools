@@ -1359,7 +1359,7 @@ public class SLDStyleFactory {
             if (expression != null) name = ExpressionExtractor.extractCqlExpressions(expression);
         }
 
-        Iterator<MarkFactory> it = DynamicSymbolFactoryFinder.getMarkFactories();
+        Iterator<MarkFactory> it = getMarkFactoriesIterator();
         while (it.hasNext()) {
             MarkFactory factory = it.next();
             try {
@@ -1375,6 +1375,23 @@ public class SLDStyleFactory {
 
         return null;
     }
+
+    /**
+     * Calls all the available {@link MarkFactoriesProcessor} extensions and apply them to the
+     * original Mark factories iterator.
+     *
+     * @return the final filtered and ordered Mark Factory iterator
+     */
+    static Iterator<MarkFactory> getMarkFactoriesIterator() {
+        Iterator<MarkFactory> markFactories = DynamicSymbolFactoryFinder.getMarkFactories();
+        Iterator<MarkFactoriesProcessor> processors =
+                DynamicSymbolFactoryFinder.getMarkFactoriesProcessors();
+        while (processors.hasNext()) {
+            markFactories = processors.next().processFactories(markFactories);
+        }
+        return markFactories;
+    }
+
     /**
      * @param g2d graphics context
      * @param tx x offset
@@ -1712,7 +1729,7 @@ public class SLDStyleFactory {
         MarkImpl mark = (MarkImpl) stroke.getGraphicStroke().graphicalSymbols().get(0);
         // does not have WKT
         if (mark.getWellKnownName() == null) return false;
-        Iterator<MarkFactory> it = DynamicSymbolFactoryFinder.getMarkFactories();
+        Iterator<MarkFactory> it = getMarkFactoriesIterator();
         Shape shape = null;
         while (it.hasNext()) {
             MarkFactory factory = it.next();

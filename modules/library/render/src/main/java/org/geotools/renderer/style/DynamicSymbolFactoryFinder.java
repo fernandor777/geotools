@@ -89,6 +89,18 @@ public final class DynamicSymbolFactoryFinder {
     }
 
     /**
+     * Finds all implementations of {@link MarkFactoriesProcessor} which have registered using the
+     * services mechanism.
+     *
+     * @return a iterator with the registered processors
+     */
+    public static synchronized Iterator<MarkFactoriesProcessor> getMarkFactoriesProcessors() {
+        return getServiceRegistry()
+                .getFactories(MarkFactoriesProcessor.class, null, null)
+                .iterator();
+    }
+
+    /**
      * Returns the service registry. The registry will be created the first time this method is
      * invoked.
      */
@@ -99,9 +111,14 @@ public final class DynamicSymbolFactoryFinder {
                     new FactoryCreator(
                             Arrays.asList(
                                     new Class<?>[] {
-                                        MarkFactory.class, ExternalGraphicFactory.class
+                                        MarkFactory.class,
+                                        ExternalGraphicFactory.class,
+                                        MarkFactoriesProcessor.class
                                     }));
+            // set Mark Factory processors order
+            setMarkFactoryProcessorsOrder(registry);
         }
+
         return registry;
     }
 
@@ -115,5 +132,10 @@ public final class DynamicSymbolFactoryFinder {
      */
     public static synchronized void scanForPlugins() {
         getServiceRegistry().scanForPlugins();
+    }
+
+    /** Sets Mark Factories processors order based on the priority integer. */
+    private static void setMarkFactoryProcessorsOrder(FactoryRegistry registry) {
+        registry.setOrdering(MarkFactoriesProcessor.class, new MarkFactoriesProcessorComparator());
     }
 }
