@@ -89,6 +89,7 @@ import org.geotools.filter.expression.PropertyAccessorFactory;
 import org.geotools.filter.text.cql2.CQL;
 import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.filter.visitor.DuplicatingFilterVisitor;
+import org.geotools.jdbc.JDBCDataStore;
 import org.geotools.jdbc.JDBCFeatureSource;
 import org.geotools.jdbc.JDBCFeatureStore;
 import org.geotools.jdbc.JoinPropertyName;
@@ -120,6 +121,8 @@ public class AppSchemaDataAccessConfigurator {
 
     public static final String PROPERTY_REPLACE_OR_UNION = "app-schema.orUnionReplace";
 
+    private static final String SCHEMA_STORE_KEY_SEPARATOR = "::schema::";
+
     /** Whether the mapping is for an include. */
     private boolean isInclude = false;
 
@@ -135,6 +138,10 @@ public class AppSchemaDataAccessConfigurator {
     private NamespaceSupport namespaces;
 
     private Map<String, String> schemaURIs;
+
+    private final Map<String, Map<String, Serializable>> sourceDataStoreParamsById = new LinkedHashMap<>();
+
+    private final Map<String, SourceDataStore> sourceDataStoreConfigsById = new LinkedHashMap<>();
 
     /** Convenience method for "joining" property. */
     public static boolean isJoining() {
@@ -755,10 +762,8 @@ public class AppSchemaDataAccessConfigurator {
         String dsId = dto.getSourceDataStore();
         String typeName = dto.getSourceTypeName();
 
-        DataAccess<FeatureType, Feature> sourceDataStore = sourceDataStores.get(dsId);
-        if (sourceDataStore == null) {
-            throw new DataSourceException("datastore " + dsId + " not found for type mapping " + dto);
-        }
+        DataAccess<? extends FeatureType, ? extends Feature> sourceDataStore =
+                resolveSourceDataStore(dto, sourceDataStores);
 
         AppSchemaDataAccessConfigurator.LOGGER.fine(
                 "asking datastore " + sourceDataStore + " for source type " + typeName);
@@ -769,6 +774,85 @@ public class AppSchemaDataAccessConfigurator {
         }
         AppSchemaDataAccessConfigurator.LOGGER.fine("found feature source for " + typeName);
         return fSource;
+    }
+
+    private DataAccess<? extends FeatureType, ? extends Feature> resolveSourceDataStore(
+            TypeMapping dto, Map<String, DataAccess<FeatureType, Feature>> sourceDataStores) throws IOException {
+        String dsId = dto.getSourceDataStore();
+        DataAccess<? extends FeatureType, ? extends Feature> sourceDataStore = sourceDataStores.get(dsId);
+        if (sourceDataStore == null) {
+            throw new DataSourceException("datastore " + dsId + " not found for type mapping " + dto);
+        }
+
+        String databaseSchema = StringUtils.trimToNull(dto.getSourceDatabaseSchema());
+        if (databaseSchema == null) {
+            return sourceDataStore;
+        }
+
+        if (!(sourceDataStore instanceof JDBCDataStore)) {
+            String mappingId = dto.getMappingName() != null ? dto.getMappingName() : dto.getTargetElementName();
+            LOGGER.warning("sourceDatabaseSchema ignored for mapping '" + mappingId + "'; datastore '" + dsId
+                    + "' is not JDBC");
+            return sourceDataStore;
+        }
+
+        JDBCDataStore jdbcStore = (JDBCDataStore) sourceDataStore;
+        if (databaseSchema.equals(jdbcStore.getDatabaseSchema())) {
+            return sourceDataStore;
+        }
+
+        String schemaKey = schemaDataStoreKey(dsId, databaseSchema);
+        DataAccess<FeatureType, Feature> schemaDataStore = sourceDataStores.get(schemaKey);
+        if (schemaDataStore != null) {
+            return schemaDataStore;
+        }
+
+        Map<String, Serializable> baseParams = sourceDataStoreParamsById.get(dsId);
+        if (baseParams == null) {
+            throw new DataSourceException("datastore params for '" + dsId + "' not found for type mapping " + dto);
+        }
+        Map<String, Serializable> schemaParams = new LinkedHashMap<>(baseParams);
+        schemaParams.put("schema", databaseSchema);
+
+        SourceDataStore baseConfig = sourceDataStoreConfigsById.get(dsId);
+        schemaDataStore = getOrCreateDataStore(schemaParams, baseConfig);
+        sourceDataStores.put(schemaKey, schemaDataStore);
+        return schemaDataStore;
+    }
+
+    private DataAccess<FeatureType, Feature> getOrCreateDataStore(
+            Map<String, Serializable> datastoreParams, SourceDataStore baseConfig) throws IOException {
+        DataAccess<FeatureType, Feature> dataStore = null;
+        if (dataStoreMap != null && dataStoreMap.containsKey(datastoreParams)) {
+            dataStore = dataStoreMap.get(datastoreParams);
+        } else {
+            SourceDataStore schemaConfig = new SourceDataStore();
+            if (baseConfig != null) {
+                schemaConfig.setId(baseConfig.getId());
+                schemaConfig.setDataAccess(Boolean.toString(baseConfig.isDataAccess()));
+            }
+            schemaConfig.setParams(datastoreParams);
+
+            List<CustomSourceDataStore> extensions = CustomSourceDataStore.loadExtensions();
+            dataStore = buildDataStore(extensions, schemaConfig, config);
+            dataStore = dataStore == null ? DataAccessFinder.getDataStore(datastoreParams) : dataStore;
+            if (dataStoreMap != null) {
+                dataStoreMap.put(datastoreParams, dataStore);
+            }
+        }
+
+        if (dataStore == null) {
+            AppSchemaDataAccessConfigurator.LOGGER.log(
+                    Level.SEVERE, "Cannot find a DataAccess for parameters " + datastoreParams);
+            throw new DataSourceException("Cannot find a DataAccess for parameters "
+                    + "(some not shown) "
+                    + filterDatastoreParams(datastoreParams));
+        }
+        return dataStore;
+    }
+
+    private String schemaDataStoreKey(String dataStoreId, String databaseSchema) {
+        return dataStoreId + SCHEMA_STORE_KEY_SEPARATOR + databaseSchema;
     }
 
     /**
@@ -885,6 +969,8 @@ public class AppSchemaDataAccessConfigurator {
             Map<String, Serializable> datastoreParams = dsconfig.getParams();
 
             datastoreParams = resolveRelativePaths(datastoreParams);
+            sourceDataStoreParamsById.put(id, datastoreParams);
+            sourceDataStoreConfigsById.put(id, dsconfig);
 
             AppSchemaDataAccessConfigurator.LOGGER.fine("looking for datastore " + id);
 
