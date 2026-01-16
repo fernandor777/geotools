@@ -121,6 +121,8 @@ public class AppSchemaDataAccessConfigurator {
 
     public static final String PROPERTY_REPLACE_OR_UNION = "app-schema.orUnionReplace";
 
+    public static final String PROPERTY_CROSS_SCHEMA_JOINING = "app-schema.crossSchemaJoining";
+
     private static final String SCHEMA_STORE_KEY_SEPARATOR = "::schema::";
 
     /** Whether the mapping is for an include. */
@@ -145,13 +147,43 @@ public class AppSchemaDataAccessConfigurator {
 
     /** Convenience method for "joining" property. */
     public static boolean isJoining() {
-        String s = AppSchemaDataAccessRegistry.getAppSchemaProperties().getProperty(PROPERTY_JOINING);
-        return s == null || s.equalsIgnoreCase("true");
+        String value = getJoiningOverride();
+        if (value == null) {
+            value = AppSchemaDataAccessRegistry.getAppSchemaProperties().getProperty(PROPERTY_JOINING);
+        }
+        return value == null || value.equalsIgnoreCase("true");
     }
 
     public static boolean isJoiningSet() {
+        if (getJoiningOverride() != null) {
+            return true;
+        }
         String s = AppSchemaDataAccessRegistry.getAppSchemaProperties().getProperty(PROPERTY_JOINING);
         return s != null;
+    }
+
+    public static boolean isCrossSchemaJoiningEnabled() {
+        String value = getCrossSchemaJoiningOverride();
+        if (value == null) {
+            value = AppSchemaDataAccessRegistry.getAppSchemaProperties().getProperty(PROPERTY_CROSS_SCHEMA_JOINING);
+        }
+        return value != null && value.equalsIgnoreCase("true");
+    }
+
+    private static String getJoiningOverride() {
+        String value = System.getProperty(PROPERTY_JOINING);
+        if (value != null) {
+            return value;
+        }
+        return System.getenv("APP_SCHEMA_JOINING");
+    }
+
+    private static String getCrossSchemaJoiningOverride() {
+        String value = System.getProperty(PROPERTY_CROSS_SCHEMA_JOINING);
+        if (value != null) {
+            return value;
+        }
+        return System.getenv("APP_SCHEMA_CROSS_SCHEMA_JOINING");
     }
 
     public static boolean isOrUnionReplacementEnabled() {
@@ -353,8 +385,10 @@ public class AppSchemaDataAccessConfigurator {
                 boolean isDatabaseBackend =
                         featureSource instanceof JDBCFeatureSource || featureSource instanceof JDBCFeatureStore;
 
+                boolean useJoining = isJoining() && isDatabaseBackend;
+
                 List<AttributeMapping> attMappings = getAttributeMappings(
-                        target, dto.getAttributeMappings(), dto.getItemXpath(), crs, isDatabaseBackend);
+                        target, dto.getAttributeMappings(), dto.getItemXpath(), crs, isDatabaseBackend, useJoining);
 
                 // if an external index (e.g. Solr) is used in the mappings, get its data store
                 FeatureSource<SimpleFeatureType, SimpleFeature> indexFeatureSource =
@@ -371,6 +405,7 @@ public class AppSchemaDataAccessConfigurator {
                         dto.isXmlDataStore(),
                         dto.isDenormalised(),
                         dto.getSourceDataStore());
+                mapping.setSourceDatabaseSchema(StringUtils.trimToNull(dto.getSourceDatabaseSchema()));
 
                 String mappingName = dto.getMappingName();
                 if (mappingName != null) {
@@ -487,7 +522,8 @@ public class AppSchemaDataAccessConfigurator {
             final List attDtos,
             String itemXpath,
             CoordinateReferenceSystem crs,
-            boolean isJDBC)
+            boolean isJDBC,
+            boolean useJoining)
             throws IOException {
         List<AttributeMapping> attMappings = new LinkedList<>();
 
@@ -583,7 +619,7 @@ public class AppSchemaDataAccessConfigurator {
                         namespaces);
                 if (customNestedMapping != null) {
                     attMapping = customNestedMapping;
-                } else if (isJoining() && isJDBC) {
+                } else if (useJoining) {
                     attMapping = new JoiningNestedAttributeMapping(
                             idExpression,
                             sourceExpression,
