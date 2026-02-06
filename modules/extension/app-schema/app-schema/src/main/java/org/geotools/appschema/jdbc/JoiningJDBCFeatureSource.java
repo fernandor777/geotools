@@ -693,7 +693,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
         featureTypeSchema = effectiveSchema(featureStore, featureTypeSchema);
 
         // primary key
-        Set<String> pkColumnNames = getAllPrimaryKeys(featureType);
+        Set<String> pkColumnNames = getAllPrimaryKeys(featureStore, featureType);
         for (String colName : pkColumnNames) {
             encodeColumnName(colName, featureType.getTypeName(), featureTypeSchema, sql, query.getHints());
             sql.append(",");
@@ -990,8 +990,9 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             String lastTableAlias = aliases[lastJoinIndex] == null ? lastTableName : aliases[lastJoinIndex];
             // For nested joins, fallback IDs must come from the joined parent table (last join),
             // not from the current feature type PK columns.
+            JDBCDataStore lastJoinStore = resolveDataStore(query, lastTableName, lastTableSchema);
             Set<String> lastJoinPkColumnNames =
-                    getAllPrimaryKeys(resolveFeatureType(query, lastTableName, lastTableSchema));
+                    getAllPrimaryKeys(lastJoinStore, resolveFeatureType(query, lastTableName, lastTableSchema));
             pagingApplied = applyPaging(
                     lastJoin,
                     sql,
@@ -1054,7 +1055,9 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
 
         if (lastSortBy.length == 0) {
             // GEOT-4554: if ID expression is not specified, use PK
-            Set<String> lastTablePk = getAllPrimaryKeys(resolveFeatureType(query, lastTableName, lastTableSchema));
+            JDBCDataStore lastTableStore = resolveDataStore(query, lastTableName, lastTableSchema);
+            Set<String> lastTablePk =
+                    getAllPrimaryKeys(lastTableStore, resolveFeatureType(query, lastTableName, lastTableSchema));
             int i = 0;
             for (String pk : lastTablePk) {
                 getDataStore().dialect.encodeColumnName(null, pk, sortBySQL);
@@ -1824,10 +1827,14 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
     }
 
     private Set<String> getAllPrimaryKeys(SimpleFeatureType featureType) {
+        return getAllPrimaryKeys(getDataStore(), featureType);
+    }
+
+    private Set<String> getAllPrimaryKeys(JDBCDataStore store, SimpleFeatureType featureType) {
         PrimaryKey key = null;
 
         try {
-            key = getDataStore().getPrimaryKey(featureType);
+            key = store.getPrimaryKey(featureType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
