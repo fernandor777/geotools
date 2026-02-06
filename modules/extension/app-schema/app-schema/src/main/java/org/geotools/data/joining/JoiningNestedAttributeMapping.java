@@ -146,10 +146,6 @@ public class JoiningNestedAttributeMapping extends NestedAttributeMapping {
         join.setJoiningKeyName(nestedSourceExpression);
         String joiningTypeName = instance.baseTableQuery.getTypeName();
         join.setJoiningTypeName(joiningTypeName);
-        String joiningTypeSchema = resolveJoiningTypeSchema(instance, joiningTypeName);
-        if (joiningTypeSchema != null) {
-            join.setJoiningTypeSchema(joiningTypeSchema);
-        }
         join.setDenormalised(fMapping.isDenormalised());
         join.setSortBy(instance.baseTableQuery.getSortBy()); // incorporate order
         // pass on paging from the parent table to the same query within this join
@@ -157,12 +153,26 @@ public class JoiningNestedAttributeMapping extends NestedAttributeMapping {
         FeatureTypeMapping joiningTypeMapping = resolveJoiningTypeMapping(instance, joiningTypeName);
         if (joiningTypeMapping != null) {
             join.setRootMapping(joiningTypeMapping);
+            if (joiningTypeMapping.getSourceDatabaseSchema() != null) {
+                join.setJoiningTypeSchema(joiningTypeMapping.getSourceDatabaseSchema());
+            }
+        } else {
+            String joiningTypeSchema = resolveJoiningTypeSchema(instance, joiningTypeName);
+            if (joiningTypeSchema != null) {
+                join.setJoiningTypeSchema(joiningTypeSchema);
+            }
         }
         join.setStartIndex(instance.baseTableQuery.getStartIndex());
-        FilterAttributeExtractor extractor = new FilterAttributeExtractor();
-        instance.mapping.getFeatureIdExpression().accept(extractor, null);
-        for (String pn : extractor.getAttributeNameSet()) {
-            join.addId(pn);
+        FeatureTypeMapping idMapping = joiningTypeMapping;
+        if (idMapping == null && matchesTypeName(instance.mapping, joiningTypeName)) {
+            idMapping = instance.mapping;
+        }
+        if (idMapping != null && idMapping.getFeatureIdExpression() != null) {
+            FilterAttributeExtractor extractor = new FilterAttributeExtractor();
+            idMapping.getFeatureIdExpression().accept(extractor, null);
+            for (String pn : extractor.getAttributeNameSet()) {
+                join.addId(pn);
+            }
         }
         joins.add(0, join);
         query.setQueryJoins(joins);
@@ -258,9 +268,6 @@ public class JoiningNestedAttributeMapping extends NestedAttributeMapping {
                 }
             }
         }
-        if (matchesTypeName(instance.mapping, joiningTypeName)) {
-            return instance.mapping.getSourceDatabaseSchema();
-        }
         return null;
     }
 
@@ -279,9 +286,6 @@ public class JoiningNestedAttributeMapping extends NestedAttributeMapping {
                     }
                 }
             }
-        }
-        if (matchesTypeName(instance.mapping, joiningTypeName)) {
-            return instance.mapping;
         }
         return null;
     }

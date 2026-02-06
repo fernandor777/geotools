@@ -40,6 +40,17 @@ public class JoiningQuery extends Query {
         protected Expression joiningKeyName;
         protected SortBy[] sortBy;
 
+        public QueryJoin() {}
+
+        public QueryJoin(QueryJoin queryJoin) {
+            super(queryJoin);
+            this.joiningTypeName = queryJoin.joiningTypeName;
+            this.joiningTypeSchema = queryJoin.joiningTypeSchema;
+            this.foreignKeyName = queryJoin.foreignKeyName;
+            this.joiningKeyName = queryJoin.joiningKeyName;
+            this.sortBy = queryJoin.sortBy == null ? null : Arrays.copyOf(queryJoin.sortBy, queryJoin.sortBy.length);
+        }
+
         public String getJoiningTypeName() {
             return joiningTypeName;
         }
@@ -113,7 +124,8 @@ public class JoiningQuery extends Query {
         setQueryJoins(query.getQueryJoins());
         setSubset(query.isSubset);
         isDenormalised = query.isDenormalised;
-        ids = query.ids;
+        ids = query.ids == null ? new ArrayList<>() : new ArrayList<>(query.ids);
+        rootMapping = query.rootMapping;
     }
 
     public JoiningQuery(Query query) {
@@ -126,7 +138,14 @@ public class JoiningQuery extends Query {
     }
 
     public void setQueryJoins(List<QueryJoin> queryJoins) {
-        this.queryJoins = queryJoins;
+        if (queryJoins == null) {
+            this.queryJoins = null;
+            return;
+        }
+        this.queryJoins = new ArrayList<>(queryJoins.size());
+        for (QueryJoin queryJoin : queryJoins) {
+            this.queryJoins.add(queryJoin == null ? null : new QueryJoin(queryJoin));
+        }
     }
 
     public List<QueryJoin> getQueryJoins() {
