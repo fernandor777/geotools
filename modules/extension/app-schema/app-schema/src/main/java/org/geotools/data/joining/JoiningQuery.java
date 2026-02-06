@@ -35,6 +35,7 @@ public class JoiningQuery extends Query {
 
     public static class QueryJoin extends JoiningQuery {
         protected String joiningTypeName;
+        protected String joiningTypeSchema;
         protected Expression foreignKeyName;
         protected Expression joiningKeyName;
         protected SortBy[] sortBy;
@@ -45,6 +46,14 @@ public class JoiningQuery extends Query {
 
         public void setJoiningTypeName(String joiningTypeName) {
             this.joiningTypeName = joiningTypeName;
+        }
+
+        public String getJoiningTypeSchema() {
+            return joiningTypeSchema;
+        }
+
+        public void setJoiningTypeSchema(String joiningTypeSchema) {
+            this.joiningTypeSchema = joiningTypeSchema;
         }
 
         public Expression getForeignKeyName() {
@@ -70,6 +79,7 @@ public class JoiningQuery extends Query {
             if (!super.equals(o)) return false;
             QueryJoin queryJoin = (QueryJoin) o;
             return Objects.equals(joiningTypeName, queryJoin.joiningTypeName)
+                    && Objects.equals(joiningTypeSchema, queryJoin.joiningTypeSchema)
                     && Objects.equals(foreignKeyName, queryJoin.foreignKeyName)
                     && Objects.equals(joiningKeyName, queryJoin.joiningKeyName)
                     && Arrays.equals(sortBy, queryJoin.sortBy);
@@ -77,7 +87,7 @@ public class JoiningQuery extends Query {
 
         @Override
         public int hashCode() {
-            int result = Objects.hash(joiningTypeName, foreignKeyName, joiningKeyName);
+            int result = Objects.hash(joiningTypeName, joiningTypeSchema, foreignKeyName, joiningKeyName);
             result = 31 * result + Arrays.hashCode(sortBy);
             return result;
         }
