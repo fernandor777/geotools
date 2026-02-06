@@ -185,11 +185,34 @@ public class JoiningJDBCFeatureSourceTest {
                         return toSQL;
                     });
             Mockito.when(source.createFilterToSQL(
+                            Mockito.any(JDBCDataStore.class),
+                            Mockito.any(SimpleFeatureType.class),
+                            Mockito.anyBoolean()))
+                    .thenAnswer(invocation -> {
+                        PreparedFilterToSQL toSQL = new PreparedFilterToSQL(dialect);
+                        toSQL.setPrepareEnabled((Boolean) invocation.getArgument(2));
+                        return toSQL;
+                    });
+            Mockito.when(source.createFilterToSQL(
                             Mockito.any(SimpleFeatureType.class), Mockito.anyBoolean(), Mockito.nullable(String.class)))
                     .thenAnswer(invocation -> {
                         PreparedFilterToSQL toSQL = new PreparedFilterToSQL(dialect);
                         toSQL.setPrepareEnabled((Boolean) invocation.getArgument(1));
                         String schema = invocation.getArgument(2);
+                        if (schema != null) {
+                            toSQL.setDatabaseSchema(schema);
+                        }
+                        return toSQL;
+                    });
+            Mockito.when(source.createFilterToSQL(
+                            Mockito.any(JDBCDataStore.class),
+                            Mockito.any(SimpleFeatureType.class),
+                            Mockito.anyBoolean(),
+                            Mockito.nullable(String.class)))
+                    .thenAnswer(invocation -> {
+                        PreparedFilterToSQL toSQL = new PreparedFilterToSQL(dialect);
+                        toSQL.setPrepareEnabled((Boolean) invocation.getArgument(2));
+                        String schema = invocation.getArgument(3);
                         if (schema != null) {
                             toSQL.setDatabaseSchema(schema);
                         }

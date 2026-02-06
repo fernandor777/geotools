@@ -144,13 +144,20 @@ public class JoiningNestedAttributeMapping extends NestedAttributeMapping {
         JoiningQuery.QueryJoin join = new JoiningQuery.QueryJoin();
         join.setForeignKeyName(sourceExpression);
         join.setJoiningKeyName(nestedSourceExpression);
-        join.setJoiningTypeName(instance.baseTableQuery.getTypeName());
-        join.setJoiningTypeSchema(instance.mapping.getSourceDatabaseSchema());
+        String joiningTypeName = instance.baseTableQuery.getTypeName();
+        join.setJoiningTypeName(joiningTypeName);
+        String joiningTypeSchema = resolveJoiningTypeSchema(instance, joiningTypeName);
+        if (joiningTypeSchema != null) {
+            join.setJoiningTypeSchema(joiningTypeSchema);
+        }
         join.setDenormalised(fMapping.isDenormalised());
         join.setSortBy(instance.baseTableQuery.getSortBy()); // incorporate order
         // pass on paging from the parent table to the same query within this join
         join.setMaxFeatures(instance.baseTableQuery.getMaxFeatures());
-        join.setRootMapping(instance.mapping);
+        FeatureTypeMapping joiningTypeMapping = resolveJoiningTypeMapping(instance, joiningTypeName);
+        if (joiningTypeMapping != null) {
+            join.setRootMapping(joiningTypeMapping);
+        }
         join.setStartIndex(instance.baseTableQuery.getStartIndex());
         FilterAttributeExtractor extractor = new FilterAttributeExtractor();
         instance.mapping.getFeatureIdExpression().accept(extractor, null);
@@ -226,6 +233,65 @@ public class JoiningNestedAttributeMapping extends NestedAttributeMapping {
         }
 
         return daFeatureIterator;
+    }
+
+    private String resolveJoiningTypeSchema(Instance instance, String joiningTypeName) {
+        if (instance.baseTableQuery instanceof JoiningQuery) {
+            JoiningQuery baseJoiningQuery = (JoiningQuery) instance.baseTableQuery;
+            FeatureTypeMapping rootMapping = baseJoiningQuery.getRootMapping();
+            if (matchesTypeName(rootMapping, joiningTypeName) && rootMapping.getSourceDatabaseSchema() != null) {
+                return rootMapping.getSourceDatabaseSchema();
+            }
+            if (baseJoiningQuery.getQueryJoins() != null) {
+                for (JoiningQuery.QueryJoin queryJoin : baseJoiningQuery.getQueryJoins()) {
+                    if (!joiningTypeName.equals(queryJoin.getJoiningTypeName())) {
+                        continue;
+                    }
+                    if (queryJoin.getJoiningTypeSchema() != null) {
+                        return queryJoin.getJoiningTypeSchema();
+                    }
+                    FeatureTypeMapping queryJoinMapping = queryJoin.getRootMapping();
+                    if (matchesTypeName(queryJoinMapping, joiningTypeName)
+                            && queryJoinMapping.getSourceDatabaseSchema() != null) {
+                        return queryJoinMapping.getSourceDatabaseSchema();
+                    }
+                }
+            }
+        }
+        if (matchesTypeName(instance.mapping, joiningTypeName)) {
+            return instance.mapping.getSourceDatabaseSchema();
+        }
+        return null;
+    }
+
+    private FeatureTypeMapping resolveJoiningTypeMapping(Instance instance, String joiningTypeName) {
+        if (instance.baseTableQuery instanceof JoiningQuery) {
+            JoiningQuery baseJoiningQuery = (JoiningQuery) instance.baseTableQuery;
+            FeatureTypeMapping rootMapping = baseJoiningQuery.getRootMapping();
+            if (matchesTypeName(rootMapping, joiningTypeName)) {
+                return rootMapping;
+            }
+            if (baseJoiningQuery.getQueryJoins() != null) {
+                for (JoiningQuery.QueryJoin queryJoin : baseJoiningQuery.getQueryJoins()) {
+                    FeatureTypeMapping queryJoinMapping = queryJoin.getRootMapping();
+                    if (matchesTypeName(queryJoinMapping, joiningTypeName)) {
+                        return queryJoinMapping;
+                    }
+                }
+            }
+        }
+        if (matchesTypeName(instance.mapping, joiningTypeName)) {
+            return instance.mapping;
+        }
+        return null;
+    }
+
+    private boolean matchesTypeName(FeatureTypeMapping mapping, String typeName) {
+        return mapping != null
+                && mapping.getSource() != null
+                && mapping.getSource().getSchema() != null
+                && typeName != null
+                && typeName.equals(mapping.getSource().getSchema().getName().getLocalPart());
     }
 
     /**
