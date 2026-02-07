@@ -224,10 +224,16 @@ public class JoiningNestedAttributeMapping extends NestedAttributeMapping {
 
         DataAccessMappingFeatureIterator daFeatureIterator = (DataAccessMappingFeatureIterator) featureIterator;
 
-        List<Expression> foreignIds = new ArrayList<>();
-        for (int i = 0; i < query.getQueryJoins().size(); i++) {
-            for (int j = 0; j < query.getQueryJoins().get(i).getIds().size(); j++) {
-                foreignIds.add(filterFac.property(JoiningJDBCFeatureSource.FOREIGN_ID + "_" + i + "_" + j));
+        // Ensure row-level metadata is initialized before deriving FOREIGN_ID_* expressions.
+        daFeatureIterator.hasNext();
+        List<Expression> foreignIds = daFeatureIterator.getForeignIdsFromSourceSchema();
+        if (foreignIds.isEmpty()) {
+            // Fallback for cases where schema metadata is not available yet.
+            foreignIds = new ArrayList<>();
+            for (int i = 0; i < query.getQueryJoins().size(); i++) {
+                for (int j = 0; j < query.getQueryJoins().get(i).getIds().size(); j++) {
+                    foreignIds.add(filterFac.property(JoiningJDBCFeatureSource.FOREIGN_ID + "_" + i + "_" + j));
+                }
             }
         }
 
