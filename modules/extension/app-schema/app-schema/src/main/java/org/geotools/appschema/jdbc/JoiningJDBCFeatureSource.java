@@ -1058,9 +1058,15 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             JDBCDataStore lastTableStore = resolveDataStore(query, lastTableName, lastTableSchema);
             Set<String> lastTablePk =
                     getAllPrimaryKeys(lastTableStore, resolveFeatureType(query, lastTableName, lastTableSchema));
-            int i = 0;
-            for (String pk : lastTablePk) {
-                getDataStore().dialect.encodeColumnName(null, pk, sortBySQL);
+            if (!lastTablePk.isEmpty()) {
+                int i = 0;
+                for (String pk : lastTablePk) {
+                    getDataStore().dialect.encodeColumnName(null, pk, sortBySQL);
+                    if (i < lastTablePk.size() - 1) {
+                        sortBySQL.append(", ");
+                    }
+                    i++;
+                }
                 sortBySQL.append(" FROM ");
                 if (!lastTableAlias.equals(lastTableName)) {
                     encodeAliasedTableName(lastTableName, lastTableSchema, sortBySQL, query.getHints(), lastTableAlias);
@@ -1079,13 +1085,16 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                 sortBySQL.append(" ) ");
                 getDataStore().dialect.encodeTableName(TEMP_FILTER_ALIAS, sortBySQL);
                 sortBySQL.append(" ON ( ");
-                encodeColumnName2(pk, lastTableAlias, sortBySQL, null);
-                sortBySQL.append(" = ");
-                encodeColumnName2(pk, TEMP_FILTER_ALIAS, sortBySQL, null);
-                if (i < lastPkColumnNames.size() - 1) {
-                    sortBySQL.append(" AND ");
+                i = 0;
+                for (String pk : lastTablePk) {
+                    encodeColumnName2(pk, lastTableAlias, sortBySQL, null);
+                    sortBySQL.append(" = ");
+                    encodeColumnName2(pk, TEMP_FILTER_ALIAS, sortBySQL, null);
+                    if (i < lastTablePk.size() - 1) {
+                        sortBySQL.append(" AND ");
+                    }
+                    i++;
                 }
-                i++;
                 hasSortBy = true;
             }
         }
@@ -1289,6 +1298,11 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                         if (!idSQL.toString().equals(orderBy)) {
                             topIds.append(", ").append(orderBy);
                         }
+                    }
+                    // Ensure ORDER BY is never empty (PostgreSQL syntax error near ')').
+                    // This can happen when sort expressions resolve only to the same id column.
+                    if (sortSQL.length() == 0) {
+                        sortSQL.append(idSQL);
                     }
                     topIds.append(" FROM ");
                     encodeTableName(typeName, typeSchema, topIds, query.getHints());
