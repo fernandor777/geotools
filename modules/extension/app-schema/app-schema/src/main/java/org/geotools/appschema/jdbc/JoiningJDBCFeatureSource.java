@@ -990,9 +990,12 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             String lastTableAlias = aliases[lastJoinIndex] == null ? lastTableName : aliases[lastJoinIndex];
             // For nested joins, fallback IDs must come from the joined parent table (last join),
             // not from the current feature type PK columns.
-            JDBCDataStore lastJoinStore = resolveDataStore(query, lastTableName, lastTableSchema);
-            Set<String> lastJoinPkColumnNames =
-                    getAllPrimaryKeys(lastJoinStore, resolveFeatureType(query, lastTableName, lastTableSchema));
+            Set<String> lastJoinPkColumnNames = Collections.emptySet();
+            if (lastJoin.getIds().isEmpty()) {
+                JDBCDataStore lastJoinStore = resolveDataStore(query, lastTableName, lastTableSchema);
+                lastJoinPkColumnNames =
+                        getAllPrimaryKeys(lastJoinStore, resolveFeatureType(query, lastTableName, lastTableSchema));
+            }
             pagingApplied = applyPaging(
                     lastJoin,
                     sql,
@@ -1076,12 +1079,18 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                 String sqlFilter;
                 if (NestedFilterToSQL.isNestedFilter(filter)) {
                     toSQL.setFieldEncoder(new JoiningFieldEncoder(curTypeName, getDataStore()));
-                    sortBySQL.append(" WHERE ");
                     sqlFilter = createNestedFilter(filter, query, toSQL).toString();
                 } else {
                     sqlFilter = toSQL.encodeToString(filter);
                 }
-                sortBySQL.append(" ").append(sqlFilter);
+                if (sqlFilter != null && !sqlFilter.isBlank()) {
+                    if (NestedFilterToSQL.isNestedFilter(filter)) {
+                        sortBySQL.append(" WHERE ");
+                    } else {
+                        sortBySQL.append(" ");
+                    }
+                    sortBySQL.append(sqlFilter);
+                }
                 sortBySQL.append(" ) ");
                 getDataStore().dialect.encodeTableName(TEMP_FILTER_ALIAS, sortBySQL);
                 sortBySQL.append(" ON ( ");
@@ -1171,7 +1180,6 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
         // perform a left join with multi values tables of the root feature type
         encodeMultipleValueJoin(query.getRootMapping(), lastTableName, getDataStore(), sortBySQL);
         if (NestedFilterToSQL.isNestedFilter(filter)) {
-            sortBySQL.append(" WHERE ");
             // if it's postgis and replacement is enabled use UNION
             boolean replaceOrWithUnion = isPostgisDialect() && isOrUnionReplacementEnabled();
             // get current select clause
@@ -1180,9 +1188,16 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             SimpleFeatureType featureType = toSQL.getFeatureType();
             JDBCDataStore lastStore = resolveDataStore(query, lastTableName, lastTableSchema);
             FilterToSQL toSQL2 = createFilterToSQL(lastStore, featureType, false);
-            sortBySQL.append(createNestedFilter(filter, query, toSQL2, selectClause, replaceOrWithUnion));
+            String sqlFilter = createNestedFilter(filter, query, toSQL2, selectClause, replaceOrWithUnion)
+                    .toString();
+            if (sqlFilter != null && !sqlFilter.isBlank()) {
+                sortBySQL.append(" WHERE ").append(sqlFilter);
+            }
         } else {
-            sortBySQL.append(" ").append(toSQL.encodeToString(filter));
+            String sqlFilter = toSQL.encodeToString(filter);
+            if (sqlFilter != null && !sqlFilter.isBlank()) {
+                sortBySQL.append(" ").append(sqlFilter);
+            }
         }
         sortBySQL.append(" ) ");
         getDataStore().dialect.encodeTableName(TEMP_FILTER_ALIAS, sortBySQL);
@@ -1312,9 +1327,16 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                     if (filter != null) {
                         if (NestedFilterToSQL.isNestedFilter(filter)) {
                             filterToSQL.setFieldEncoder(new JoiningFieldEncoder(typeName, getDataStore()));
-                            topIds.append(" WHERE ").append(createNestedFilter(filter, query, filterToSQL));
+                            String sqlFilter = createNestedFilter(filter, query, filterToSQL)
+                                    .toString();
+                            if (sqlFilter != null && !sqlFilter.isBlank()) {
+                                topIds.append(" WHERE ").append(sqlFilter);
+                            }
                         } else {
-                            topIds.append(" ").append(filterToSQL.encodeToString(filter));
+                            String sqlFilter = filterToSQL.encodeToString(filter);
+                            if (sqlFilter != null && !sqlFilter.isBlank()) {
+                                topIds.append(" ").append(sqlFilter);
+                            }
                         }
                     }
                     topIds.append(" ORDER BY ");
