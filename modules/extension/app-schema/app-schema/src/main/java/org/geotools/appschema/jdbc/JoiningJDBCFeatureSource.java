@@ -424,6 +424,17 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
         return null;
     }
 
+    private FeatureTypeMapping resolveFilterRootMapping(JoiningQuery query, String typeName, String schema) {
+        FeatureTypeMapping mapping = resolveMappingForTypeName(query, typeName, schema);
+        if (mapping == null && schema != null) {
+            mapping = resolveMappingForTypeName(query, typeName, null);
+        }
+        if (mapping != null) {
+            return mapping;
+        }
+        return query != null ? query.getRootMapping() : null;
+    }
+
     private boolean schemaMatches(FeatureTypeMapping mapping, String schema) {
         if (schema == null) {
             return true;
@@ -838,8 +849,12 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                         : resolveSchemaForJoin(
                                 query,
                                 query.getQueryJoins().get(query.getQueryJoins().size() - 1));
+                FeatureTypeMapping lastTableMapping = resolveFilterRootMapping(query, lastTableName, lastTableSchema);
                 JDBCDataStore lastStore = resolveDataStore(query, lastTableName, lastTableSchema);
                 lastTableSchema = effectiveSchema(lastStore, lastTableSchema);
+                if (lastTableMapping == null) {
+                    lastTableMapping = resolveFilterRootMapping(query, lastTableName, lastTableSchema);
+                }
                 toSQL = createFilterToSQL(
                         lastStore,
                         resolveFeatureType(query, lastTableName, lastTableSchema),
@@ -859,6 +874,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                             tableNames,
                             toSQL,
                             filter,
+                            lastTableMapping,
                             ids,
                             aliases);
 
@@ -873,12 +889,13 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                             lastTableName,
                             lastTableSchema,
                             lastTableAlias,
+                            lastTableMapping,
                             ids,
                             curTypeName);
                 } else if (!pagingApplied) {
                     if (NestedFilterToSQL.isNestedFilter(filter)) {
                         toSQL.setFieldEncoder(new JoiningFieldEncoder(curTypeName, getDataStore()));
-                        sql.append(" WHERE ").append(createNestedFilter(filter, query, toSQL));
+                        sql.append(" WHERE ").append(createNestedFilter(filter, lastTableMapping, toSQL));
                     } else {
                         sql.append(" ").append(toSQL.encodeToString(filter));
                     }
@@ -888,7 +905,20 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             }
         } else if (!isCount) {
             pagingApplied = applyPaging(
-                    query, isRootFeature, sql, featureType, pkColumnNames, tableNames, null, null, null, aliases);
+                    query,
+                    isRootFeature,
+                    sql,
+                    featureType,
+                    pkColumnNames,
+                    tableNames,
+                    null,
+                    null,
+                    resolveFilterRootMapping(
+                            query,
+                            featureType.getTypeName(),
+                            resolveSchemaForTypeName(query, featureType.getTypeName())),
+                    null,
+                    aliases);
         }
 
         // sorting
@@ -959,6 +989,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             Set<String> tableNames,
             FilterToSQL toSQL,
             Filter filter,
+            FeatureTypeMapping filterRootMapping,
             Collection<String> ids,
             String[] aliases)
             throws IOException, SQLException, FilterToSQLException {
@@ -977,6 +1008,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                     tableNames,
                     toSQL,
                     filter,
+                    filterRootMapping,
                     ids);
         } else if (!isRootFeature) {
             // also we always need to apply paging for the last queryJoin since it is the
@@ -996,6 +1028,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                 lastJoinPkColumnNames =
                         getAllPrimaryKeys(lastJoinStore, resolveFeatureType(query, lastTableName, lastTableSchema));
             }
+            FeatureTypeMapping lastTableMapping = resolveFilterRootMapping(query, lastTableName, lastTableSchema);
             pagingApplied = applyPaging(
                     lastJoin,
                     sql,
@@ -1005,6 +1038,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                     tableNames,
                     toSQL,
                     filter,
+                    lastTableMapping,
                     ids);
         }
         return pagingApplied;
@@ -1020,6 +1054,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             String lastTableName,
             String lastTableSchema,
             String lastTableAlias,
+            FeatureTypeMapping filterRootMapping,
             Collection<String> ids,
             String curTypeName)
             throws SQLException, FilterToSQLException, IOException {
@@ -1037,6 +1072,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                         query,
                         toSQL,
                         filter,
+                        filterRootMapping,
                         lastSortBy,
                         lastTableName,
                         lastTableSchema,
@@ -1048,6 +1084,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                         query,
                         toSQL,
                         filter,
+                        filterRootMapping,
                         lastSortBy,
                         lastTableName,
                         lastTableSchema,
@@ -1079,7 +1116,8 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                 String sqlFilter;
                 if (NestedFilterToSQL.isNestedFilter(filter)) {
                     toSQL.setFieldEncoder(new JoiningFieldEncoder(curTypeName, getDataStore()));
-                    sqlFilter = createNestedFilter(filter, query, toSQL).toString();
+                    sqlFilter =
+                            createNestedFilter(filter, filterRootMapping, toSQL).toString();
                 } else {
                     sqlFilter = toSQL.encodeToString(filter);
                 }
@@ -1120,6 +1158,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             JoiningQuery query,
             FilterToSQL toSQL,
             Filter filter,
+            FeatureTypeMapping filterRootMapping,
             SortBy[] lastSortBy,
             String lastTableName,
             String lastTableSchema,
@@ -1131,7 +1170,16 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
         for (int i = 0; i < lastSortBy.length; i++) {
             if (!ids.contains(lastSortBy[i].getPropertyName().toString())) {
                 hasSortBy = processSortByKey(
-                        query, toSQL, filter, lastSortBy, lastTableName, lastTableSchema, lastTableAlias, sortBySQL, i);
+                        query,
+                        filterRootMapping,
+                        toSQL,
+                        filter,
+                        lastSortBy,
+                        lastTableName,
+                        lastTableSchema,
+                        lastTableAlias,
+                        sortBySQL,
+                        i);
             }
         }
         return hasSortBy;
@@ -1145,6 +1193,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             JoiningQuery query,
             FilterToSQL toSQL,
             Filter filter,
+            FeatureTypeMapping filterRootMapping,
             SortBy[] lastSortBy,
             String lastTableName,
             String lastTableSchema,
@@ -1155,13 +1204,23 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             throws SQLException, FilterToSQLException {
         for (int i = lastSortBy.length - lastPkColumnNames.size(); i < lastSortBy.length; i++) {
             hasSortBy = processSortByKey(
-                    query, toSQL, filter, lastSortBy, lastTableName, lastTableSchema, lastTableAlias, sortBySQL, i);
+                    query,
+                    filterRootMapping,
+                    toSQL,
+                    filter,
+                    lastSortBy,
+                    lastTableName,
+                    lastTableSchema,
+                    lastTableAlias,
+                    sortBySQL,
+                    i);
         }
         return hasSortBy;
     }
 
     private boolean processSortByKey(
             JoiningQuery query,
+            FeatureTypeMapping filterRootMapping,
             FilterToSQL toSQL,
             Filter filter,
             SortBy[] lastSortBy,
@@ -1178,7 +1237,11 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
         sortBySQL.append(" FROM ");
         encodeTableName(lastTableName, lastTableSchema, sortBySQL, query.getHints());
         // perform a left join with multi values tables of the root feature type
-        encodeMultipleValueJoin(query.getRootMapping(), lastTableName, getDataStore(), sortBySQL);
+        JDBCDataStore mappingStore = getMappingDataStore(filterRootMapping);
+        if (mappingStore == null) {
+            mappingStore = getDataStore();
+        }
+        encodeMultipleValueJoin(filterRootMapping, lastTableName, mappingStore, sortBySQL);
         if (NestedFilterToSQL.isNestedFilter(filter)) {
             // if it's postgis and replacement is enabled use UNION
             boolean replaceOrWithUnion = isPostgisDialect() && isOrUnionReplacementEnabled();
@@ -1188,7 +1251,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             SimpleFeatureType featureType = toSQL.getFeatureType();
             JDBCDataStore lastStore = resolveDataStore(query, lastTableName, lastTableSchema);
             FilterToSQL toSQL2 = createFilterToSQL(lastStore, featureType, false);
-            String sqlFilter = createNestedFilter(filter, query, toSQL2, selectClause, replaceOrWithUnion)
+            String sqlFilter = createNestedFilter(filter, filterRootMapping, toSQL2, selectClause, replaceOrWithUnion)
                     .toString();
             if (sqlFilter != null && !sqlFilter.isBlank()) {
                 sortBySQL.append(" WHERE ").append(sqlFilter);
@@ -1214,6 +1277,9 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
 
     private void encodeMultipleValueJoin(
             FeatureTypeMapping rootMapping, String rootTableName, JDBCDataStore store, StringBuffer sql) {
+        if (rootMapping == null) {
+            return;
+        }
         for (AttributeMapping attributeMapping : rootMapping.getAttributeMappings()) {
             if (!(attributeMapping.getMultipleValue() instanceof JdbcMultipleValue)) {
                 continue;
@@ -1240,7 +1306,15 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
 
     private Object createNestedFilter(Filter filter, JoiningQuery query, FilterToSQL filterToSQL)
             throws FilterToSQLException {
-        NestedFilterToSQL nested = new NestedFilterToSQL(query.getRootMapping(), filterToSQL);
+        return createNestedFilter(filter, query.getRootMapping(), filterToSQL);
+    }
+
+    private Object createNestedFilter(Filter filter, FeatureTypeMapping rootMapping, FilterToSQL filterToSQL)
+            throws FilterToSQLException {
+        if (rootMapping == null) {
+            return filterToSQL.encodeToString(filter);
+        }
+        NestedFilterToSQL nested = new NestedFilterToSQL(rootMapping, filterToSQL);
         nested.setInline(true);
         return nested.encodeToString(filter);
     }
@@ -1248,7 +1322,20 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
     private Object createNestedFilter(
             Filter filter, JoiningQuery query, FilterToSQL filterToSQL, String selectClause, boolean replaceOrWithUnion)
             throws FilterToSQLException {
-        NestedFilterToSQL nested = new NestedFilterToSQL(query.getRootMapping(), filterToSQL);
+        return createNestedFilter(filter, query.getRootMapping(), filterToSQL, selectClause, replaceOrWithUnion);
+    }
+
+    private Object createNestedFilter(
+            Filter filter,
+            FeatureTypeMapping rootMapping,
+            FilterToSQL filterToSQL,
+            String selectClause,
+            boolean replaceOrWithUnion)
+            throws FilterToSQLException {
+        if (rootMapping == null) {
+            return filterToSQL.encodeToString(filter);
+        }
+        NestedFilterToSQL nested = new NestedFilterToSQL(rootMapping, filterToSQL);
         nested.setInline(true);
         nested.setSelectClause(selectClause);
         nested.setReplaceOrWithUnion(replaceOrWithUnion);
@@ -1268,6 +1355,7 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             Set<String> tableNames,
             FilterToSQL filterToSQL,
             Filter filter,
+            FeatureTypeMapping filterRootMapping,
             Collection<String> allIds)
             throws SQLException, FilterToSQLException, IOException {
         Collection<String> ids = Collections.emptyList();
@@ -1322,12 +1410,16 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                     topIds.append(" FROM ");
                     encodeTableName(typeName, typeSchema, topIds, query.getHints());
                     // perform a left join with multi values tables of the root feature type
-                    encodeMultipleValueJoin(query.getRootMapping(), typeName, getDataStore(), topIds);
+                    JDBCDataStore mappingStore = getMappingDataStore(filterRootMapping);
+                    if (mappingStore == null) {
+                        mappingStore = getDataStore();
+                    }
+                    encodeMultipleValueJoin(filterRootMapping, typeName, mappingStore, topIds);
                     // apply filter
                     if (filter != null) {
                         if (NestedFilterToSQL.isNestedFilter(filter)) {
                             filterToSQL.setFieldEncoder(new JoiningFieldEncoder(typeName, getDataStore()));
-                            String sqlFilter = createNestedFilter(filter, query, filterToSQL)
+                            String sqlFilter = createNestedFilter(filter, filterRootMapping, filterToSQL)
                                     .toString();
                             if (sqlFilter != null && !sqlFilter.isBlank()) {
                                 topIds.append(" WHERE ").append(sqlFilter);
