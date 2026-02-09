@@ -281,8 +281,9 @@ public class NestedFilterToSQL extends FilterToSQL {
         String nestedTableColumn = nestedFilterToSQL.encodeToString(nestedExpr);
 
         if (stepIdx == 0) {
-            encodeColumnName(
-                    store, parentTableColumn, parentTableName, resolveDatabaseSchema(parentFeature), sql, null);
+            // Correlated predicates must reference the outer table identifier, not a schema-qualified name.
+            // The root query uses table name as reference (without an explicit alias).
+            encodeAliasedColumnName(store, parentTableColumn, parentTableName, sql, null);
         } else {
             encodeAliasedColumnName(store, parentTableColumn, parentTableAlias, sql, null);
         }
@@ -537,6 +538,9 @@ public class NestedFilterToSQL extends FilterToSQL {
                         // selectClause will carry the parent SELECT FROM clauses, so we use it to
                         // build UNION
                         out.write(" UNION " + selectClause + " ");
+                        if (!selectClause.trim().toUpperCase().endsWith("WHERE")) {
+                            out.write("WHERE ");
+                        }
                     }
                 }
 

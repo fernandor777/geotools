@@ -105,7 +105,8 @@ public class NestedFilterToSQLTest extends AppSchemaTestSupport {
             String sql = out.toString().toUpperCase(Locale.ROOT);
             assertTrue(sql.contains("EXISTS ("));
             assertTrue(sql.contains("FROM NESTED_SCHEMA.NESTED_TABLE"));
-            assertTrue(sql.contains("WHERE PARENT_SCHEMA.PARENT_TABLE"));
+            // The correlated predicate points to the outer query table identifier.
+            assertTrue(sql.contains("WHERE PARENT_TABLE"));
         } finally {
             org.geotools.data.complex.AppSchemaDataAccessRegistry.clearAppSchemaProperties();
         }
