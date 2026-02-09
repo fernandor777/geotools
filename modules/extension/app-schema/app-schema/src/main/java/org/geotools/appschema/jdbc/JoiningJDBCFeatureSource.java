@@ -425,7 +425,18 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
     }
 
     private FeatureTypeMapping resolveFilterRootMapping(JoiningQuery query, String typeName, String schema) {
-        FeatureTypeMapping mapping = resolveMappingForTypeName(query, typeName, schema);
+        // For nested/chained queries, prefer the mapping attached to the query join.
+        // The query root mapping may point to the nested target (same source table, different
+        // target type), which cannot encode root-level nested filters correctly.
+        FeatureTypeMapping mapping = resolveJoinMappingForTypeName(query, typeName, schema);
+        if (mapping == null && schema != null) {
+            mapping = resolveJoinMappingForTypeName(query, typeName, null);
+        }
+        if (mapping != null) {
+            return mapping;
+        }
+
+        mapping = resolveMappingForTypeName(query, typeName, schema);
         if (mapping == null && schema != null) {
             mapping = resolveMappingForTypeName(query, typeName, null);
         }
@@ -433,6 +444,19 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             return mapping;
         }
         return query != null ? query.getRootMapping() : null;
+    }
+
+    private FeatureTypeMapping resolveJoinMappingForTypeName(JoiningQuery query, String typeName, String schema) {
+        if (query == null || query.getQueryJoins() == null) {
+            return null;
+        }
+        for (QueryJoin join : query.getQueryJoins()) {
+            FeatureTypeMapping mapping = join.getRootMapping();
+            if (matchesTypeName(mapping, typeName) && schemaMatches(mapping, schema)) {
+                return mapping;
+            }
+        }
+        return null;
     }
 
     private boolean schemaMatches(FeatureTypeMapping mapping, String schema) {
