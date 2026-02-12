@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -121,6 +122,81 @@ public class JoiningJDBCFeatureSourceTest {
         String sql = source.createCountQuery(dialect, origType, query, columns, toSQLRef);
         // assert that between table name and WHERE clause we have a space
         assertTrue(sql.contains(" FROM TEST WHERE "));
+    }
+
+    @Test
+    public void testCountQueryWithoutIdColumns() throws Exception {
+        SimpleFeatureTypeBuilder builder = new SimpleFeatureTypeBuilder();
+        builder.setName("test");
+        builder.add("testAttr", String.class);
+        SimpleFeatureType origType = builder.buildFeatureType();
+
+        JoiningQuery query = new JoiningQuery();
+        query.setFilter(FF.equals(FF.property("testAttr"), FF.literal("testValue")));
+
+        JDBCDataStore store = new JDBCDataStore();
+        OracleDialect dialect = new OracleDialect(store);
+        store.setSQLDialect(dialect);
+
+        ContentEntry mockEntry = Mockito.mock(ContentEntry.class);
+        Mockito.when(mockEntry.getDataStore()).thenReturn(store);
+        JDBCState state = Mockito.mock(JDBCState.class);
+        Mockito.when(mockEntry.getState(Mockito.any(Transaction.class))).thenReturn(state);
+        Mockito.when(state.getPrimaryKey()).thenReturn(new PrimaryKey(null, Collections.emptyList()));
+
+        JoiningJDBCFeatureSource source = Mockito.mock(JoiningJDBCFeatureSource.class);
+        Mockito.when(source.getEntry()).thenReturn(mockEntry);
+        Mockito.when(source.createFilterToSQL(origType)).thenReturn(new PreparedFilterToSQL(dialect));
+        Mockito.when(source.createFilterToSQL(origType, true)).thenReturn(new PreparedFilterToSQL(dialect));
+        Mockito.when(source.createFilterToSQL(origType, true, null)).thenReturn(new PreparedFilterToSQL(dialect));
+        Mockito.when(source.getDataStore()).thenReturn(store);
+
+        AtomicReference<PreparedFilterToSQL> toSQLRef = new AtomicReference<>();
+        Mockito.doCallRealMethod()
+                .when(source)
+                .createCountQuery(dialect, origType, query, Collections.emptySet(), toSQLRef);
+
+        String sql = source.createCountQuery(dialect, origType, query, Collections.emptySet(), toSQLRef);
+        String normalized = sql.toUpperCase(Locale.ROOT);
+
+        assertTrue(normalized.startsWith("SELECT COUNT(*) FROM TEST"));
+        assertTrue(normalized.contains(" WHERE "));
+        assertTrue(!normalized.contains("SELECT COUNT(*) FROM (SELECT DISTINCT"));
+    }
+
+    @Test
+    public void testJoiningCountQueryWithoutIdColumns() throws Exception {
+        SimpleFeatureTypeBuilder builder = new SimpleFeatureTypeBuilder();
+        builder.setName("test");
+        builder.add("testAttr", String.class);
+        SimpleFeatureType origType = builder.buildFeatureType();
+
+        JoiningQuery query = new JoiningQuery();
+        query.setFilter(org.geotools.api.filter.Filter.INCLUDE);
+
+        JDBCDataStore store = new JDBCDataStore();
+        OracleDialect dialect = new OracleDialect(store);
+        store.setSQLDialect(dialect);
+
+        JoiningJDBCFeatureSource source = Mockito.mock(JoiningJDBCFeatureSource.class);
+        Mockito.when(source.selectSQL(origType, query, null, true)).thenReturn("SELECT TEST.TESTATTR FROM TEST");
+
+        Method createJoiningCountQuery = JoiningJDBCFeatureSource.class.getDeclaredMethod(
+                "createJoiningCountQuery",
+                org.geotools.jdbc.SQLDialect.class,
+                SimpleFeatureType.class,
+                JoiningQuery.class,
+                Set.class,
+                AtomicReference.class);
+        createJoiningCountQuery.setAccessible(true);
+
+        @SuppressWarnings("unchecked")
+        String sql =
+                (String) createJoiningCountQuery.invoke(source, dialect, origType, query, Collections.emptySet(), null);
+        String normalized = sql.toUpperCase(Locale.ROOT);
+
+        assertTrue(
+                normalized.contains("SELECT COUNT(*) FROM (SELECT DISTINCT * FROM (SELECT TEST.TESTATTR FROM TEST)"));
     }
 
     @Test

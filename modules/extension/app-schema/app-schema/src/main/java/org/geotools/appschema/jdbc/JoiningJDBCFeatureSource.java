@@ -1426,7 +1426,8 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
                             topIds.append(", ").append(orderBy);
                         }
                     }
-                    // Ensure ORDER BY is never empty (PostgreSQL syntax error near ')').
+                    // Ensure ORDER BY is never empty to avoid invalid SQL in dialects requiring
+                    // at least one ORDER BY expression when paging/sorting is applied.
                     // This can happen when sort expressions resolve only to the same id column.
                     if (sortSQL.length() == 0) {
                         sortSQL.append(idSQL);
@@ -1916,6 +1917,10 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             Set<String> idColumnNames,
             AtomicReference<PreparedFilterToSQL> toSQLRef)
             throws FilterToSQLException, SQLException {
+        if (idColumnNames == null || idColumnNames.isEmpty()) {
+            return createCountQueryWithoutIdColumns(querySchema, query, toSQLRef);
+        }
+
         StringBuffer countSQL = new StringBuffer("SELECT COUNT(*) FROM (SELECT DISTINCT ");
         String querySchemaName = resolveSchemaForTypeName(query, querySchema.getTypeName());
         JDBCDataStore queryStore = resolveDataStore(query, querySchema.getTypeName(), querySchemaName);
@@ -1950,6 +1955,10 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             Set<String> idColumnNames,
             AtomicReference<PreparedFilterToSQL> toSQLRef)
             throws IOException, SQLException, FilterToSQLException {
+        if (idColumnNames == null || idColumnNames.isEmpty()) {
+            return createJoiningCountQueryWithoutIdColumns(dialect, querySchema, query, toSQLRef);
+        }
+
         StringBuffer countSQL = new StringBuffer("SELECT COUNT(*) FROM (SELECT DISTINCT ");
         boolean first = true;
         for (String idColumnName : idColumnNames) {
@@ -1960,6 +1969,56 @@ public class JoiningJDBCFeatureSource extends JDBCFeatureSource {
             first = false;
         }
         countSQL.append(" FROM (");
+        String sql = selectSQL(querySchema, query, toSQLRef, true);
+        countSQL.append(sql).append(") ");
+        dialect.encodeTableName(COUNT_TABLE_ALIAS, countSQL);
+        countSQL.append(") ");
+        dialect.encodeTableName(DISTINCT_TABLE_ALIAS, countSQL);
+        String countQuery = countSQL.toString();
+        if (LOGGER.isLoggable(Level.FINE)) LOGGER.fine(countQuery);
+        return countQuery;
+    }
+
+    /**
+     * Fallback for count generation when no id column can be resolved.
+     *
+     * <p>This prevents invalid SQL like {@code SELECT DISTINCT FROM ...}, which triggers a syntax error across SQL
+     * dialects.
+     */
+    private String createCountQueryWithoutIdColumns(
+            SimpleFeatureType querySchema, JoiningQuery query, AtomicReference<PreparedFilterToSQL> toSQLRef)
+            throws FilterToSQLException, SQLException {
+        StringBuffer countSQL = new StringBuffer("SELECT COUNT(*) FROM ");
+        String querySchemaName = resolveSchemaForTypeName(query, querySchema.getTypeName());
+        JDBCDataStore queryStore = resolveDataStore(query, querySchema.getTypeName(), querySchemaName);
+        querySchemaName = effectiveSchema(queryStore, querySchemaName);
+        encodeTableName(querySchema.getTypeName(), querySchemaName, countSQL, query.getHints());
+        if (!query.getFilter().equals(Filter.INCLUDE)) {
+            countSQL.append(" ");
+            FilterToSQL toSql = createFilterToSQL(querySchema, true, querySchemaName);
+            countSQL.append(toSql.encodeToString(query.getFilter()));
+            if (toSql instanceof PreparedFilterToSQL) {
+                toSQLRef.set((PreparedFilterToSQL) toSql);
+            }
+        }
+        String countQuery = countSQL.toString();
+        if (LOGGER.isLoggable(Level.FINE)) LOGGER.fine(countQuery);
+        return countQuery;
+    }
+
+    /**
+     * Joining fallback for count generation when no id column can be resolved.
+     *
+     * <p>We use {@code DISTINCT *} over the joining subquery to preserve de-duplication without emitting an empty
+     * DISTINCT projection.
+     */
+    private String createJoiningCountQueryWithoutIdColumns(
+            SQLDialect dialect,
+            SimpleFeatureType querySchema,
+            JoiningQuery query,
+            AtomicReference<PreparedFilterToSQL> toSQLRef)
+            throws IOException, SQLException, FilterToSQLException {
+        StringBuffer countSQL = new StringBuffer("SELECT COUNT(*) FROM (SELECT DISTINCT * FROM (");
         String sql = selectSQL(querySchema, query, toSQLRef, true);
         countSQL.append(sql).append(") ");
         dialect.encodeTableName(COUNT_TABLE_ALIAS, countSQL);
